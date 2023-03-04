@@ -102,3 +102,4 @@ TODO: set up git commit hook to ensure all `*.secret.yaml` files are encrypted
 
 * https://libreddit.de/r/selfhosted/comments/wre8ua/authentiktraefikk8sfluxcd_because_documentation/
 * https://github.com/lenaxia/k3s-ops/tree/main
+* https://geek-cookbook.funkypenguin.co.nz/kubernetes/deployment/flux/operate/
