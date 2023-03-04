@@ -18,3 +18,83 @@ Flux CRDs:
 https://fluxcd.io/flux/components/helm/
 
 Initialize "prod" environment by pointing Flux to the Git repo and Kustomization: `kubectl apply -f flux-apps-prod.yaml`
+
+## Secrets Management
+
+Using [SOPS](https://github.com/mozilla/sops) and [age](https://age-encryption.org/), following <https://fluxcd.io/flux/guides/mozilla-sops/>.
+
+Create a new public/private keypair:
+
+```sh
+age-keygen -o agekey.txt
+
+export PUBKEY=<public key from previous command>
+```
+
+Inject it into the cluster:
+
+```sh
+kubectl create secret generic sops-age \
+--namespace=flux-system \
+--from-file=age.agekey=agekey.txt
+```
+
+Remove `age.agekey` from the repository and store it in a secure location!
+
+```sh
+mkdir -p ~/.config/sops/age/
+mv agekey.txt ~/.config/sops/age/keys.txt
+```
+
+Add this to the main `Kustomization`:
+
+```yaml
+spec:
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+```
+
+Create SOPS config:
+
+```
+cat <<EOF > .sops.yaml
+creation_rules:
+  - path_regex: (.*)\.secret\.yaml
+    encrypted_regex: ^(data|stringData)$
+    age: ${PUB_KEY}
+EOF
+```
+
+Note: all sensitive information must be stored in files named `*.secret.yaml`.
+
+Give SOPS encryption a try:
+
+```
+kubectl -n default create secret generic example \
+--from-literal=user=admin \
+--from-literal=password=change-me \
+--dry-run=client \
+-o yaml > example.secret.yaml
+
+sops --encrypt --in-place example.secret.yaml
+
+cat example.secret.yaml
+
+# edit secret file with $EDITOR
+sops example.secret.yaml
+```
+
+TODO: set up git commit hook to ensure all `*.secret.yaml` files are encrypted
+
+## Resources
+
+### References
+
+*
+
+### Examples
+
+* https://libreddit.de/r/selfhosted/comments/wre8ua/authentiktraefikk8sfluxcd_because_documentation/
+* https://github.com/lenaxia/k3s-ops/tree/main
