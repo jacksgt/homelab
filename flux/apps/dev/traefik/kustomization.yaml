@@ -1,0 +1,20 @@
+# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: traefik-dev
+resources:
+  - namespace.yaml
+  - ../../bases/traefik/
+patches:
+  # https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/patches/#patch-using-inline-json6902
+
+  # Replace HelmRelease name with "traefik-dev" (to avoid conflicts on cluster-scoped resources)
+  - patch: |-
+      - op: replace
+        path: /metadata/name
+        value: traefik-dev
+    target:
+      group: helm.toolkit.fluxcd.io
+      version: v2beta1
+      kind: HelmRelease

@@ -19,6 +19,10 @@ https://fluxcd.io/flux/components/helm/
 
 Initialize "prod" environment by pointing Flux to the Git repo and Kustomization: `kubectl apply -f flux-apps-prod.yaml`
 
+Useful commands:
+
+* `flux tree kustomization apps-prod` (`-n flux-system` is implied)
+
 ## Secrets Management
 
 Using [SOPS](https://github.com/mozilla/sops) and [age](https://age-encryption.org/), following <https://fluxcd.io/flux/guides/mozilla-sops/>.
