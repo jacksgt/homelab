@@ -27,6 +27,10 @@ spec:
         - containerPort: 80
           name: http
           protocol: TCP
+          hostPort: 8097
+        env:
+          - name: "FB_NOAUTH"
+            value: "true"
         volumeMounts:
           - name: data
             mountPath: /srv
