@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-data
+  labels:
+    app.kubernetes.io/name: jellyfin
+    app.kubernetes.io/component: server
+spec:
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  storageClassName: "juicefs-minio"
+  resources:
+    requests:
+      storage: 1

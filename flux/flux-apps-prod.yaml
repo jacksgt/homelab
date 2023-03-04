@@ -6,7 +6,7 @@ metadata:
   name: homelab-apps-prod
   namespace: flux-system
 spec:
-  interval: 5m
+  interval: 1m
   url: https://github.com/jacksgt/homelab
   ref:
     branch: master

@@ -1,0 +1,60 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  labels:
+    app.kubernetes.io/name: jellyfin
+    app.kubernetes.io/component: server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jellyfin
+      app.kubernetes.io/component: server
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jellyfin
+        app.kubernetes.io/component: server
+    spec:
+      containers:
+      - name: jellyfin
+        # https://github.com/linuxserver/docker-jellyfin/releases
+        image: lscr.io/linuxserver/jellyfin:10.8.9-1-ls199
+        # https://docs.linuxserver.io/images/docker-jellyfin#ports-p
+        ports:
+        - containerPort: 8096
+          name: http
+          protocol: TCP
+          hostPort: 8096
+        - containerPort: 7359
+          name: discovery
+          protocol: UDP
+          hostPort: 7359
+        - containerPort: 1900
+          name: dlna-discovery
+          protocol: UDP
+          hostPort: 1900
+        volumeMounts:
+          - name: storage
+            mountPath: /config
+            subPath: config
+          - name: storage
+            mountPath: /storage
+            subPath: storage
+          # https://docs.linuxserver.io/images/docker-jellyfin#hardware-acceleration
+          - name: hardware-acceleration
+            mountPath: /dev/dri
+        securityContext:
+          privileged: true
+        resources: {}
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: jellyfin-data
+        - name: hardware-acceleration
+          hostPath:
+            path: /dev/dri
