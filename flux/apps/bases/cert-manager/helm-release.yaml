@@ -6,12 +6,16 @@ spec:
   interval: 5m
   chart:
     spec:
+      # https://artifacthub.io/packages/helm/cert-manager/cert-manager
+      # https://cert-manager.io/docs/release-notes/
+      # note cert-manager releases and Helm chart releases are in-sync
       chart: "cert-manager"
-      version: "v1.7.1"
+      version: "v1.11.0"
       sourceRef:
         kind: HelmRepository
         name: jetstack-charts
-      interval: 1m
+
+  # https://github.com/cert-manager/cert-manager/blob/master/deploy/charts/cert-manager/values.yaml
   values:
     installCRDs: true
     resources:
