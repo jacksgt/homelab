@@ -24,26 +24,19 @@ spec:
       limits:
         memory: 100Mi
     containerSecurityContext:
+      allowPrivilegeEscalation: false
       capabilities: { drop: ["ALL"] }
-      readOnlyRootFilesystem: true,
-      runAsNonRoot: true,
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
     prometheus:
       enabled: false
     webhook:
-      containerSecurityContext:
-        capabilities: { drop: ["ALL"] }
-        readOnlyRootFilesystem: true,
-        runAsNonRoot: true,
       resources:
         requests:
           memory: 20Mi
         limits:
           memory: 100Mi
     cainjector:
-      containerSecurityContext:
-        capabilities: { drop: ["ALL"] }
-        readOnlyRootFilesystem: true,
-        runAsNonRoot: true,
       resources:
         requests:
           memory: 40Mi
