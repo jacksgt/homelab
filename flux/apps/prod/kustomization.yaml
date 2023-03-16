@@ -6,3 +6,4 @@ resources:
   - ./traefik/
   - ./juicefs/
   - ./homepage/
+  - ./db-operator/
