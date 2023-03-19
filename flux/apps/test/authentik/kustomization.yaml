@@ -1,0 +1,21 @@
+# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: authentik-test
+resources:
+  - namespace.yaml
+  - ../../bases/authentik/
+  - values.secret.yaml
+
+patches:
+  - target:
+      kind: Database
+      name: authentik
+    patch: |-
+      - op: replace
+        path: /spec/instance
+        value: "pg-instance-prod"
+      - op: replace
+        path: /spec/deletionProtected
+        value: true
