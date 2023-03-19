@@ -7,3 +7,4 @@ resources:
   - ./juicefs/
   - ./homepage/
   - ./db-operator/
+  - ./authentik/
