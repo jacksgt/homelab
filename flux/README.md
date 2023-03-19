@@ -32,7 +32,7 @@ Create a new public/private keypair:
 ```sh
 age-keygen -o agekey.txt
 
-export PUBKEY=<public key from previous command>
+export PUB_KEY=<public key from previous command>
 ```
 
 Inject it into the cluster:
@@ -47,7 +47,7 @@ Remove `age.agekey` from the repository and store it in a secure location!
 
 ```sh
 mkdir -p ~/.config/sops/age/
-mv agekey.txt ~/.config/sops/age/keys.txt
+mv -n agekey.txt ~/.config/sops/age/keys.txt
 ```
 
 Add this to the main `Kustomization`:
@@ -92,14 +92,21 @@ sops example.secret.yaml
 
 TODO: set up git commit hook to ensure all `*.secret.yaml` files are encrypted
 
+See also: <https://blog.loholt.io/sops/>
+
 ## Resources
 
 ### References
 
-*
+* Flux `GitRepository`: https://fluxcd.io/flux/components/source/gitrepositories/
+* Kustomize Patches (*Strategic* & *JSON*): https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/patches/
+* JSON Patch Reference: https://jsonpatch.com/
 
 ### Examples
 
 * https://libreddit.de/r/selfhosted/comments/wre8ua/authentiktraefikk8sfluxcd_because_documentation/
 * https://github.com/lenaxia/k3s-ops/tree/main
 * https://geek-cookbook.funkypenguin.co.nz/kubernetes/deployment/flux/operate/
+* https://github.com/onedr0p/flux-cluster-template
+* JSON Patch Tricks: https://blog.scottlowe.org/2021/07/07/adding-multiple-items-using-kustomize-json-6902-patches/
+* Kustomize Overlay Patches cannot be encrypted with SOPS: https://github.com/fluxcd/kustomize-controller/issues/344
