@@ -24,11 +24,18 @@ spec:
       create: true
     resources:
       requests:
-        memory: 80Mi
+        memory: 100Mi
         cpu: 10m
       limits:
         memory: 250Mi
         cpu: 200m
+
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities: { drop: ["ALL"] }
 
     # Note: ingress should be defined in the Kustomize overlay!
     ingress: {}
