@@ -11,7 +11,7 @@ spec:
       # https://github.com/goauthentik/helm
       # note Authentik releases and Helm chart releases are in-sync
       chart: "authentik"
-      version: "2022.12.1"
+      version: "2023.3.1"
       sourceRef:
         kind: HelmRepository
         name: authentik
@@ -80,18 +80,25 @@ spec:
 
     # for server
     securityContext:
-      allowPrivilegeEscalation: false
-      capabilities: { drop: ["ALL"] }
-      readOnlyRootFilesystem: true
       runAsNonRoot: true
+
+    # waiting for https://github.com/goauthentik/helm/pull/93
+    # podSecurityContext:
+    #   allowPrivilegeEscalation: false
+    #   capabilities: { drop: ["ALL"] }
+    #   readOnlyRootFilesystem: true
+
 
     # for worker
     worker:
       securityContext:
-        allowPrivilegeEscalation: false
-        capabilities: { drop: ["ALL"] }
-        readOnlyRootFilesystem: true
         runAsNonRoot: true
+      # waiting for https://github.com/goauthentik/helm/pull/93
+      # podSecurityContext:
+      #   allowPrivilegeEscalation: false
+      #   capabilities: { drop: ["ALL"] }
+      #   readOnlyRootFilesystem: true
+
     prometheus:
       serviceMonitor:
         create: false # TODO: enable metrics
