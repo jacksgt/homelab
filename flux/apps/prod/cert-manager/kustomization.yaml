@@ -6,4 +6,3 @@ namespace: cert-manager
 resources:
   - namespace.yaml
   - ../../bases/cert-manager/
-  - example.secret.yaml

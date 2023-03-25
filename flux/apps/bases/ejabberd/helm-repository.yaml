@@ -1,0 +1,18 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: GitRepository
+metadata:
+  name: jacksgt
+spec:
+  interval: 1m
+  url: https://github.com/jacksgt/helm-charts.git
+  ref:
+    branch: ejabberd
+
+# TODO: switch to HelmRepository once release is final
+# apiVersion: source.toolkit.fluxcd.io/v1beta2
+# kind: HelmRepository
+# metadata:
+#   name: martialblog
+# spec:
+#   interval: 1h
+#   url: https://martialblog.github.io/helm-charts
