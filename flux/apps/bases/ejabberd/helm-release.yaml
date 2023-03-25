@@ -83,9 +83,9 @@ spec:
         mod_fail2ban: {}
         mod_http_api: {}
         mod_http_upload:
-          put_url: "https://xmpp.@HOST@:5443/upload"
+          put_url: "https://@HOST@:5443/upload"
           custom_headers:
-            "Access-Control-Allow-Origin": "https://xmpp.@HOST@"
+            "Access-Control-Allow-Origin": "https://@HOST@"
             "Access-Control-Allow-Methods": "GET,HEAD,PUT,OPTIONS"
             "Access-Control-Allow-Headers": "Content-Type"
         mod_last: {}
@@ -146,24 +146,59 @@ spec:
         mod_version:
           show_os: false
 
+      acl:
+        local:
+          user_regexp: ""
+        loopback:
+          ip:
+            - 127.0.0.0/8
+            - ::1/128
+
       access_rules:
         local:
-          - allow: local
+          allow: local
         c2s:
-          - deny: blocked
-          - allow
+          deny: blocked
+          allow: all
         announce:
-          - allow: admin
+          allow: admin
         configure:
-          - allow: admin
+          allow: admin
         muc_create:
-          - allow: local
+          allow: local
         pubsub_createnode:
-          - allow: local
-        register:
-          - allow
+          allow: local
         trusted_network:
-          - allow: loopback
+          allow: loopback
+
+      api_permissions:
+        "console commands":
+          from:
+            - ejabberd_ctl
+          who: all
+          what: "*"
+        "admin access":
+          who:
+            access:
+              allow:
+                - acl: loopback
+                - acl: admin
+            oauth:
+              scope: "ejabberd:admin"
+              access:
+                allow:
+                  - acl: loopback
+                  - acl: admin
+          what:
+            - "*"
+            - "!stop"
+            - "!start"
+        "public commands":
+          who:
+            ip: 127.0.0.1/8
+          what:
+            - status
+            - connected_users_number
 
     persistence:
       enabled: true
