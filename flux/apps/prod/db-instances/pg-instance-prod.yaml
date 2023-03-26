@@ -1,0 +1,23 @@
+# https://github.com/kloeckner-i/db-operator/blob/master/docs/creatinginstances.md
+apiVersion: kci.rocks/v1beta1
+kind: DbInstance
+metadata:
+  name: pg-instance-prod
+  # cluster-scoped resource without namespace
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  engine: postgres
+  generic:
+    host: postgres.postgres.svc.cluster.local
+    port: 5432
+  adminSecretRef:
+    Name: postgres-admin-secret-for-db-instance
+    Namespace: postgres
+  backup:
+    bucket: ""
+  monitoring:
+    enabled: false
+  sslConnection:
+    enabled: false
+    skip-verify: false

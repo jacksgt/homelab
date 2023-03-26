@@ -7,5 +7,6 @@ resources:
   - ./juicefs/
   - ./homepage/
   - ./db-operator/
+  - ./db-instances/
   - ./authentik/
   - ./ejabberd/
