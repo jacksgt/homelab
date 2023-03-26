@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/name: jellyfin
     app.kubernetes.io/component: filebrowser
 spec:
-  replicas: 1
+  # replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: jellyfin
@@ -27,7 +27,6 @@ spec:
         - containerPort: 80
           name: http
           protocol: TCP
-          hostPort: 8097
         env:
           - name: "FB_NOAUTH"
             value: "true"

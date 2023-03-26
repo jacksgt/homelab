@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: jellyfin
     app.kubernetes.io/component: server
 spec:
-  replicas: 1
+  # replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: jellyfin
@@ -29,15 +29,12 @@ spec:
         - containerPort: 8096
           name: http
           protocol: TCP
-          hostPort: 8096
         - containerPort: 7359
           name: discovery
           protocol: UDP
-          hostPort: 7359
         - containerPort: 1900
           name: dlna-discovery
           protocol: UDP
-          hostPort: 1900
         volumeMounts:
           - name: storage
             mountPath: /config
