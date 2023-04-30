@@ -18,7 +18,7 @@ spec:
     image:
       # https://github.com/benphelps/homepage/releases
       repository: ghcr.io/benphelps/homepage
-      tag: v0.6.10
+      tag: v0.6.16
     enableRbac: true
     serviceAccount:
       create: true
