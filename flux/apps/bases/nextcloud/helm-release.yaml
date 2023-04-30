@@ -6,27 +6,19 @@ spec:
   interval: 5m
   chart:
     spec:
-      # https://github.com/nextcloud/helm/tree/master/charts/nextcloud
+      # https://github.com/nextcloud/helm/tree/main/charts/nextcloud
       chart: "nextcloud"
       version: "3.5.12" # was: "2.14.4"
       sourceRef:
         kind: HelmRepository
         name: nextcloud
 
-  # infinite retries for installation
-  install:
-    remediation:
-      retries: -1
-  upgrade:
-    remediation:
-      retries: -1
-
-  # https://github.com/nextcloud/helm/blob/master/charts/nextcloud/values.yaml
+  # https://github.com/nextcloud/helm/blob/main/charts/nextcloud/values.yaml
   values:
     image:
       # https://github.com/nextcloud/server/tags
       # https://hub.docker.com/_/nextcloud/?tab=tags
-      tag: "25.0.2-apache"
+      tag: "26.0.1-apache"
 
     ingress:
       enabled: true
@@ -75,6 +67,10 @@ spec:
         capabilities:
           drop: ["ALL"]
           # add: ["CAP_NET_BIND_SERVICE"] # allows binding on ports less than 1024
+          add:
+            # required permissions so busybox crond runs successfully, see `man 2 setgroups`
+            # > crond: can't set groups: Operation not permitted
+            - "CAP_SETGID"
 
       # Not working currently, see https://github.com/nextcloud/helm/issues/363
       # containerPort: 8080
@@ -139,12 +135,16 @@ spec:
     persistence:
       enabled: true
       storageClass: "local-path"
-      # existingClaim: "nextcloud"
 
     # sidecar
     cronjob:
       enabled: true
-      resources: {}
+      resources:
+        requests:
+          cpu: 1m
+          memory: 1Mi
+        limits:
+          memory: 250Mi
       securityContext: *containerSecurityContext
 
   valuesFrom:
