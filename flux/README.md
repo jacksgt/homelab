@@ -99,14 +99,24 @@ See also: <https://blog.loholt.io/sops/>
 ### References
 
 * Flux `GitRepository`: https://fluxcd.io/flux/components/source/gitrepositories/
+* Flux `HelmRelease`: https://fluxcd.io/flux/guides/helmreleases/
 * Kustomize Patches (*Strategic* & *JSON*): https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/patches/
 * JSON Patch Reference: https://jsonpatch.com/
+* Kustomize Best Practices: https://www.r-bloggers.com/2021/02/kustomize-best-practices/
 
 ### Examples
 
 * https://libreddit.de/r/selfhosted/comments/wre8ua/authentiktraefikk8sfluxcd_because_documentation/
 * https://github.com/lenaxia/k3s-ops/tree/main
+* https://github.com/fluxcd/flux2-kustomize-helm-example
 * https://geek-cookbook.funkypenguin.co.nz/kubernetes/deployment/flux/operate/
 * https://github.com/onedr0p/flux-cluster-template
 * JSON Patch Tricks: https://blog.scottlowe.org/2021/07/07/adding-multiple-items-using-kustomize-json-6902-patches/
 * Kustomize Overlay Patches cannot be encrypted with SOPS: https://github.com/fluxcd/kustomize-controller/issues/344
+* Using Environment Variables with Kustomize: https://mbuffa.github.io/tips/20210720-kustomize-environment-variables/
+
+### Other homelabs using Flux
+
+* https://github.com/samsonnguyen/homelab-flux/ (see `apps/production/kustomization.yaml`)
+* https://github.com/woodjme/homelab-flux
+* https://github.com/khuedoan/homelab

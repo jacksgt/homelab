@@ -32,3 +32,12 @@ Get size of Postgres tables:
 
 \d+
 ```
+
+
+## Selfhosted Applications
+
+Lists of self-hosted services, applications and tools:
+
+* https://yunohost.org/en/apps?q=%2Fapps
+* https://fleet.linuxserver.io/
+* https://github.com/awesome-selfhosted/awesome-selfhosted

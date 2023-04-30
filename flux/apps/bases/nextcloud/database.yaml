@@ -1,0 +1,17 @@
+apiVersion: kci.rocks/v1beta1
+kind: Database
+metadata:
+  name: nextcloud
+spec:
+  secretName: nextcloud-db-credentials
+  instance: "" # set via overlay
+  deletionProtected: false
+  backup:
+    enable: false
+    cron: "0 0 * * *"
+  secretsTemplates:
+    host: "{{ .DatabaseHost }}"
+    port: "{{ .DatabasePort }}"
+    database: "{{ .DatabaseName }}"
+    username: "{{ .UserName }}"
+    password: "{{ .Password }}"

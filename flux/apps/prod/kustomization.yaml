@@ -10,3 +10,4 @@ resources:
   - ./db-instances/
   - ./authentik/
   - ./ejabberd/
+  - ./nextcloud/
