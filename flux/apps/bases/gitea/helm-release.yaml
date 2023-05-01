@@ -10,7 +10,7 @@ spec:
       # https://gitea.com/gitea/helm-chart#upgrading
       # https://gitea.com/gitea/helm-chart/releases
       chart: "gitea"
-      version: "8.2.0" # was: 5.0.0
+      version: "8.2.0"
       sourceRef:
         kind: HelmRepository
         name: gitea
@@ -25,7 +25,7 @@ spec:
   # https://gitea.com/gitea/helm-chart/src/branch/main/values.yaml
   values:
     image:
-      tag: "1.18.5"
+      tag: "1.19.2"
       pullPolicy: IfNotPresent
       rootless: true
     gitea:
@@ -39,8 +39,6 @@ spec:
         server:
           SSH_PORT: 2222
           DOMAIN: "" # set via overlay
-          # SSH_DOMAIN: "%(DOMAIN)"
-          # ROOT_URL: "https://%(DOMAIN)"
           OFFLINE_MODE: true
           LANDING_PAGE: "explore"
         service:
