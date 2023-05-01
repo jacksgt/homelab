@@ -25,7 +25,7 @@ spec:
   # https://gitea.com/gitea/helm-chart/src/branch/main/values.yaml
   values:
     image:
-      tag: "1.17.2"
+      tag: "1.18.5"
       pullPolicy: IfNotPresent
       rootless: true
     gitea:
@@ -51,9 +51,6 @@ spec:
         log:
           LEVEL: "Info" # Trace, Debug, Info, Warn, Error, Critical, Fatal, None
           DISABLE_ROUTER_LOG: true # disable noisy HTTP access logs
-
-        picture:
-          DISABLE_GRAVATAR: true
 
       # https://docs.gitea.io/en-us/administration/config-cheat-sheet/#database-database
       additionalConfigFromEnvs:
