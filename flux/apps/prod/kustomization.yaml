@@ -11,3 +11,4 @@ resources:
   - ./authentik/
   - ./ejabberd/
   - ./nextcloud/
+  - ./gitea/

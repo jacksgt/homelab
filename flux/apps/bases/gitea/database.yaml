@@ -1,0 +1,16 @@
+apiVersion: kci.rocks/v1beta1
+kind: Database
+metadata:
+  name: gitea
+spec:
+  secretName: gitea-db-credentials
+  instance: "" # set via overlay
+  deletionProtected: false
+  backup:
+    enable: false
+    cron: "0 0 * * *"
+  secretsTemplates:
+    host: "{{ .DatabaseHost }}:{{ .DatabasePort }}"
+    name: "{{ .DatabaseName }}"
+    user: "{{ .UserName }}"
+    password: "{{ .Password }}"

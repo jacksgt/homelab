@@ -103,6 +103,7 @@ See also: <https://blog.loholt.io/sops/>
 * Kustomize Patches (*Strategic* & *JSON*): https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/patches/
 * JSON Patch Reference: https://jsonpatch.com/
 * Kustomize Best Practices: https://www.r-bloggers.com/2021/02/kustomize-best-practices/
+* Variable substitution with Flux / Kustomize: https://fluxcd.io/flux/components/kustomize/kustomization/#post-build-variable-substitution ,  https://budimanjojo.com/2021/10/27/variable-substitution-in-flux-gitops/
 
 ### Examples
 

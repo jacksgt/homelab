@@ -1,0 +1,22 @@
+# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gitea
+resources:
+  - namespace.yaml
+  - ../../bases/gitea/
+  - values.secret.yaml
+  - admin-credentials.secret.yaml
+
+patches:
+  - target:
+      kind: Database
+      name: gitea
+    patch: |-
+      - op: replace
+        path: /spec/instance
+        value: "mariadb-instance-prod"
+      - op: replace
+        path: /spec/deletionProtected
+        value: true
