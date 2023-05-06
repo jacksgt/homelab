@@ -20,8 +20,11 @@ spec:
 
   # https://github.com/goauthentik/helm/blob/main/charts/authentik/values.yaml
   values:
+    # enable remote-cluster subchart so Authentik can create Ingresses etc.
+    # https://github.com/goauthentik/helm/blob/bc77232d77c911e0ecdab3b5831bf0a445806bd0/charts/authentik/Chart.yaml#L45
+    # https://github.com/goauthentik/helm/blob/main/charts/authentik-remote-cluster/templates/role.yaml
     serviceAccount:
-      create: false
+      create: true
     authentik:
       # https://goauthentik.io/docs/installation/configuration
       avatars: "none"

@@ -6,14 +6,11 @@ spec:
   interval: 5m
   chart:
     spec:
-
       chart: "ejabberd"
-      version: ""
+      version: "0.1.0"
       sourceRef:
-        kind: GitRepository
-        name: jacksgt
-        # kind: HelmRepository
-        # name: martialblog
+        kind: HelmRepository
+        name: martialblog
 
   values:
     # hosts: set via overlay
