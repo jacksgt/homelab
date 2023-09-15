@@ -1,13 +1,6 @@
 # Kubernetes Services managed with Flux v2
 
-
 https://github.com/fluxcd/flux2
-
-Deploy applications from Helm repositories: https://fluxcd.io/flux/guides/helmreleases/
-
-Use ConfigMaps and Secrets as Helm values input: https://fluxcd.io/flux/guides/helmreleases/#refer-to-values-in-configmap-and-secret-resources
-
-Example repo using Flux + Kustomize to deploy K8s resources and Helm charts: https://github.com/fluxcd/flux2-kustomize-helm-example
 
 Test locally: `kubectl apply -k ./apps/dev/ --dry-run=client -o yaml`
 
@@ -22,6 +15,30 @@ Initialize "prod" environment by pointing Flux to the Git repo and Kustomization
 Useful commands:
 
 * `flux tree kustomization apps-prod` (`-n flux-system` is implied)
+
+## HelmController
+
+Deploy applications from Helm repositories: https://fluxcd.io/flux/guides/helmreleases/
+
+Helm controller has experimental support for drift-detection: https://github.com/fluxcd/helm-controller/issues/643
+
+The Helm controller sometimes falls into a failed reconciliation state (`upgrade retries exhausted`): https://github.com/fluxcd/helm-controller/issues/454
+
+=> can be worked around with `flux suspend helmrelease` + `flux resume helmrelease`
+
+Use ConfigMaps and Secrets as Helm values input: https://fluxcd.io/flux/guides/helmreleases/#refer-to-values-in-configmap-and-secret-resources
+
+Example repo using Flux + Kustomize to deploy K8s resources and Helm charts: https://github.com/fluxcd/flux2-kustomize-helm-example
+
+
+## Bootstrapping flux
+
+Get chart version from https://github.com/fluxcd-community/helm-charts/pkgs/container/charts%2Fflux2
+
+```sh
+RELEASE=2.10.0
+helm upgrade --install -n flux-system -f flux.values.yaml flux oci://ghcr.io/fluxcd-community/charts/flux2 --version $RELEASE
+```
 
 ## Secrets Management
 
