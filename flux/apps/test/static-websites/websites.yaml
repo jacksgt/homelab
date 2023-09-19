@@ -1,0 +1,16 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: s3-website-gateway
+spec:
+  values:
+    ingress:
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-staging
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+
+    websites:
+      - name: www-test
+        hostname: www-test.cubieserver.de
+        bucket: www-cubieserver-de
+        endpoint: https://s3.cubieserver.de

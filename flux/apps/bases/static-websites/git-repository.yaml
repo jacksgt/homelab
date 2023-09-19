@@ -1,0 +1,9 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: jacks-helm-charts
+spec:
+  interval: 5m # TODO
+  url: https://github.com/jacksgt/helm-charts
+  ref:
+    branch: master

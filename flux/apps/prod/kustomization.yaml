@@ -12,3 +12,4 @@ resources:
   - ./ejabberd/
   - ./nextcloud/
   - ./gitea/
+  - ./static-websites/
