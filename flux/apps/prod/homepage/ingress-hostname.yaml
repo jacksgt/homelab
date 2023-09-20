@@ -10,12 +10,15 @@ spec:
         annotations:
           cert-manager.io/cluster-issuer: letsencrypt-production
           traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-www@kubernetescrd
         hosts:
         - host: www.cubieserver.de
           paths:
           - path: /
-            pathType: Prefix
+            pathType: Exact
+        - host: cubieserver.de
         tls:
         - hosts:
           - www.cubieserver.de
+          - cubieserver.de
           secretName: homepage-ingress-secret

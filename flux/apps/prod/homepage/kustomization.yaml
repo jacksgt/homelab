@@ -7,5 +7,5 @@ resources:
   - namespace.yaml
   - ../../bases/homepage/
 
-patchesStrategicMerge:
-  - ingress-hostname.yaml
+patches:
+  - path: ingress-hostname.yaml
