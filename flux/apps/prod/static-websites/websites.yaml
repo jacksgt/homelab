@@ -20,5 +20,5 @@ spec:
         endpoint: https://s3.cubieserver.de
       - name: adeles-blog
         hostname: adeles.cooking
-        bucket: adeles-blog
+        bucket: adele
         endpoint: https://s3.cubieserver.de
