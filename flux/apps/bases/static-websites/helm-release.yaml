@@ -7,8 +7,7 @@ spec:
   chart:
     spec:
       chart: "s3-website-gateway"
-      reconcileStrategy: Revision
-      version: "c94773f"
+      # version: ""
       sourceRef:
         kind: GitRepository
         name: jacks-helm-charts

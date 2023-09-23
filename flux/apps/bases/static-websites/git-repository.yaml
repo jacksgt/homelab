@@ -7,3 +7,4 @@ spec:
   url: https://github.com/jacksgt/helm-charts
   ref:
     branch: master
+    commit: 91cc3283030a8c78b36cd29b1a773ca275b06029
