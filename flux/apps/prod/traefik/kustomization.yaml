@@ -6,3 +6,4 @@ namespace: traefik
 resources:
   - namespace.yaml
   - ../../bases/traefik/
+  - vector-config.secret.yaml

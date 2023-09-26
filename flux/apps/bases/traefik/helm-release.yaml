@@ -8,7 +8,7 @@ spec:
     spec:
       # https://github.com/traefik/traefik-helm-chart/tags
       chart: "traefik"
-      version: "10.24.3"
+      version: "24.0.0"
       sourceRef:
         kind: HelmRepository
         name: traefik-charts
@@ -18,8 +18,6 @@ spec:
     image:
       # https://github.com/traefik/traefik/blob/master/CHANGELOG.md
       tag: "v2.9.6"
-    deployment:
-      replicas: 1
     ports:
       # redirect HTTP (80) to HTTPS (443)
       web:
@@ -34,3 +32,86 @@ spec:
       - "--log.level=INFO"
       # Allow creation of services even if no endpoints are available (results in 503 instead of hard-to-debug 404 response)
       - "--providers.kubernetesIngress.allowEmptyServices=true"
+    logs:
+      general:
+        level: "ERROR" # DEBUG, PANIC, FATAL, ERROR, WARN, and INFO.
+      access:
+        enabled: true
+        filePath: /var/log/traefik/access.log
+        format: json
+        fields:
+          headers:
+            defaultmode: drop
+            names:
+              User-Agent: keep
+              Referer: keep
+              Host: keep
+
+    additionalVolumeMounts:
+    - name: logs
+      mountPath: /var/log/traefik
+
+    deployment:
+      replicas: 1
+      shareProcessNamespace: true
+      additionalVolumes:
+      - name: logs
+        emptyDir: {}
+      - name: vector-config
+        secret:
+          secretName: vector-config
+      additionalContainers:
+            - name: vector
+              image: docker.io/timberio/vector:0.32.2-alpine
+              env:
+                - name: VECTOR_CONFIG_DIR
+                  value: /etc/vector
+                # currently somewhat broken on k8s, see https://github.com/vectordotdev/vector/issues/15514
+                - name: VECTOR_WATCH_CONFIG
+                  value: "false"
+              volumeMounts:
+              - name: vector-config
+                mountPath: /etc/vector
+                readOnly: true
+              - name: logs
+                mountPath: /logs
+                readOnly: false
+              securityContext:
+                capabilities:
+                  drop:
+                  - ALL
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                runAsUser: 65532 # nobody
+              terminationMessagePolicy: FallbackToLogsOnError
+            - name: log-rotate
+              image: docker.io/timberio/vector:0.32.2-alpine
+              # the following command resets the log file once per day
+              command:
+              - sh
+              - -xc
+              - 'mkdir /logs/vector-data; while sleep 86400; do rm -f /logs/access.log; pkill -USR1 traefik; done'
+              volumeMounts:
+              - name: logs
+                mountPath: /logs
+              securityContext:
+                capabilities:
+                  drop:
+                  - ALL
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                runAsUser: 65532 # nobody
+              resources:
+                requests:
+                  memory: 1Mi
+                  cpu: 1m
+                limits:
+                  memory: 10Mi
+                  cpu: 10m
+              terminationMessagePolicy: FallbackToLogsOnError
+
+    metrics:
+      prometheus:
+        service:
+          enabled: true
+        serviceMonitor: {}
