@@ -1,0 +1,165 @@
+cleanPrometheusOperatorObjectNames: true
+
+defaultRules:
+  rules: {}
+  disabled: {}
+
+alertmanager:
+  # TODO: set up notification integration
+  enabled: false
+
+grafana:
+  # using external grafana
+  enabled: false
+  ## Create configmaps even if grafana deployment has been disabled
+  forceDeployDatasources: true
+  forceDeployDashboards: true
+
+kubernetesServiceMonitors:
+  enabled: true
+
+kubeApiServer:
+  # scrape data from Kube API server
+  # disabled for now -- too many time-series
+  enabled: false
+
+kubelet:
+  # scape data from each node's kubelet
+  enabled: true
+  serviceMonitor:
+    probes: false
+    cAdvisor: true
+    metricRelabelings:
+      - sourceLabels: [__name__]
+        regex: "^(apiserver|authentication|kubeproxy|go|rest|workqueue)_(.+)"
+        action: "drop"
+      # high-cardinality metrics (buckets)
+      - sourceLabels: [__name__]
+        regex: "^(kubelet_runtime_operations_duration_seconds|storage_operation_duration_seconds)_(.+)"
+        action: "drop"
+
+kubeEtcd:
+  # k3s uses SQLite as datastore instead of etcd
+  enabled: false
+
+kubeControllerManager:
+  # doesn't work on k3s because scheduler is bundled into the main server
+  enabled: false
+
+kubeScheduler:
+  # doesn't work on k3s because scheduler is bundled into the main server
+  enabled: false
+
+coreDns:
+  # not sure how useful it is, disabled for now
+  enabled: false
+
+kubeDns:
+  # using coreDns instead
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: true
+
+kube-state-metrics:
+  metricDenylist:
+  - '(.+)_created$'
+  - '(.+)_annotations$'
+  - '^kube_namespace_status_phase$'
+  - '^kube_pod_status_qos_class$'
+  - '^kube_pod_tolerations$'
+
+  # https://github.com/prometheus-community/helm-charts/blob/95c450b72c24fdc7724516d9d1302d4aea27932e/charts/kube-state-metrics/values.yaml#L299
+  collectors:
+  # - certificatesigningrequests
+  - configmaps
+  - cronjobs
+  - daemonsets
+  - deployments
+  # - endpoints
+  - horizontalpodautoscalers
+  - ingresses
+  - jobs
+  # - leases
+  # - limitranges
+  # - mutatingwebhookconfigurations
+  - namespaces
+  - networkpolicies
+  - nodes
+  - persistentvolumeclaims
+  - persistentvolumes
+  # - poddisruptionbudgets
+  - pods
+  # - replicasets
+  # - replicationcontrollers
+  - resourcequotas
+  - secrets
+  - services
+  - statefulsets
+  - storageclasses
+  # - validatingwebhookconfigurations
+  # - volumeattachments
+
+nodeExporter:
+  enabled: true
+
+# https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-node-exporter/values.yaml
+prometheus-node-exporter:
+  # https://github.com/prometheus/node_exporter#collectors
+  extraArgs:
+    - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/kubelet/.+|/run/k3s/containerd/.*)($|/)"
+    - "--collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+    - "--collector.diskstats.ignored-devices=^(ram|loop|fd|(h|s|v)d[a-z]|nvme\\d+n\\d+p)\\d+$"
+    - "--collector.arp.device-exclude=.+"
+    - "--collector.qdisk.device-exclude=.+"
+
+  prometheus:
+    monitor:
+      metricRelabelings:
+      - sourceLabels: [__name__]
+        separator: ;
+        regex: ^node_(ipvs|btrfs|netstat|network|nf|schedstat|sockstat|timex|udp|xfs|softnet)_.+
+        replacement: $1
+        action: drop
+      - sourceLabels: [__name__]
+        separator: ;
+        regex: ^go_.+
+        replacement: $1
+        action: drop
+
+prometheusOperator:
+  enabled: true
+
+prometheus:
+  enabled: true
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-production
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    hosts: ["prometheus.cubieserver.de"]
+    paths: ["/"]
+    pathType: ImplementationSpecific
+    tls:
+      - secretName: prometheus-ingress-cert
+        hosts: ["prometheus.cubieserver.de"]
+
+
+  prometheusSpec:
+    nodeSelector:
+      cubieserver.de/local-storage: "true"
+    retention: 1d # TODO
+    resources: {}
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          resources:
+            requests:
+              storage: 1
+
+thanosRuler:
+  enabled: false

@@ -1,0 +1,24 @@
+repositories:
+ - name: prometheus-community
+   url: https://prometheus-community.github.io/helm-charts
+
+releases:
+
+# helm upgrade --install kube-prometheus-stack -n monitoring -f monitoring/kube-prometheus-stack.values.yaml prometheus-community/kube-prometheus-stack
+- name: kube-prometheus-stack
+  namespace: monitoring
+  createNamespace: true
+  version: 45.25.0 # Prometheus version v2.42.0
+  chart: prometheus-community/kube-prometheus-stack
+  # https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
+  values:
+  - monitoring/kube-prometheus-stack.values.yaml
+
+# helm upgrade --install prometheus-adapter -n monitoring -f monitoring/prometheus-adapter.values.yaml prometheus-community/prometheus-adapter
+- name: prometheus-adapter
+  namespace: monitoring
+  version: 4.2.0
+  chart: prometheus-community/prometheus-adapter
+  # https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
+  values:
+  - monitoring/prometheus-adapter.values.yaml

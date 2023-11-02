@@ -1,0 +1,73 @@
+prometheus:
+  url: http://kube-prometheus-stack-prometheus
+  port: 9090
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 100Mi
+  limits:
+    cpu: 500m
+    memory: 250Mi
+
+rules:
+  custom: []
+    # - seriesQuery: '{__name__=~"^some_metric_count$"}'
+    #   resources:
+    #     template: <<.Resource>>
+    #   name:
+    #     matches: ""
+    #     as: "my_custom_metric"
+    #   metricsQuery: sum(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)
+
+  external: []
+    # - seriesQuery: '{__name__=~"^some_metric_count$"}'
+    #   resources:
+    #     template: <<.Resource>>
+    #   name:
+    #     matches: ""
+    #     as: "my_external_metric"
+    #   metricsQuery: sum(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)
+
+  # make CPU and memory metrics available to Kubernetes API
+  # this replaces k3s' built-in metrics-server
+  resource:
+    cpu:
+      containerQuery: |
+        sum by (<<.GroupBy>>) (
+          rate(container_cpu_usage_seconds_total{container!="",<<.LabelMatchers>>}[3m])
+        )
+      nodeQuery: |
+        sum  by (<<.GroupBy>>) (
+          rate(node_cpu_seconds_total{mode!="idle",mode!="iowait",mode!="steal",<<.LabelMatchers>>}[3m])
+        )
+      resources:
+        overrides:
+          node:
+            resource: node
+          namespace:
+            resource: namespace
+          pod:
+            resource: pod
+      containerLabel: container
+    memory:
+      containerQuery: |
+        sum by (<<.GroupBy>>) (
+          avg_over_time(container_memory_working_set_bytes{container!="",<<.LabelMatchers>>}[3m])
+        )
+      nodeQuery: |
+        sum by (<<.GroupBy>>) (
+          avg_over_time(node_memory_MemTotal_bytes{<<.LabelMatchers>>}[3m])
+          -
+          avg_over_time(node_memory_MemAvailable_bytes{<<.LabelMatchers>>}[3m])
+        )
+      resources:
+        overrides:
+          node:
+            resource: node
+          namespace:
+            resource: namespace
+          pod:
+            resource: pod
+      containerLabel: container
+    window: 3m

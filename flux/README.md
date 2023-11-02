@@ -111,6 +111,27 @@ TODO: set up git commit hook to ensure all `*.secret.yaml` files are encrypted
 
 See also: <https://blog.loholt.io/sops/>
 
+## Backup Kubernetes manifests
+
+Store k8s YAML manifests locally with [kube-dump](https://github.com/WoozyMasta/kube-dump):
+
+```
+mkdir -p kube_dump
+kube-dump all -d kube_dump/
+```
+
+The following objects could be excluded, but [it's currently not supported by the tool](https://github.com/WoozyMasta/kube-dump/pull/42):
+
+```
+events.events.k8s.io
+endpointslices.discovery.k8s.io
+pods.metrics.k8s.io
+pods
+replicasets.apps
+orders.acme.cert-manager.io
+leases.coordination.k8s.io
+```
+
 ## Resources
 
 ### References
