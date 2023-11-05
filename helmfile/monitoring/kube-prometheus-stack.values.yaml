@@ -156,10 +156,11 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: local-path
+          # use XFS filesystem for Prometheus database (instead of btrfs)
+          storageClassName: local-path-xfs
           resources:
             requests:
-              storage: 1
+              storage: 1 # local-path ignores storage requests
 
 thanosRuler:
   enabled: false

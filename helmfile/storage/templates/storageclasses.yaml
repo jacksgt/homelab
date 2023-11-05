@@ -1,0 +1,22 @@
+# To make the provisioner choose a specific path, use a storageClass defined with a parameter called nodePath. Note that this path should be defined in the nodePathMap
+# https://github.com/rancher/local-path-provisioner/blob/master/README.md#storage-classes
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path-btrfs
+provisioner: rancher.io/local-path
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  nodePath: /data/btrfs/local-path-provisioner
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path-xfs
+provisioner: rancher.io/local-path
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  nodePath: /data/xfs/local-path-provisioner

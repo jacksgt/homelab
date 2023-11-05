@@ -1,8 +1,11 @@
 # helm plugin install https://github.com/databus23/helm-diff
+# helm plugin install https://github.com/jkroepke/helm-secrets --version v4.5.1
 
 repositories:
  - name: prometheus-community
    url: https://prometheus-community.github.io/helm-charts
+ - name: bitnami-pre-2022
+   url: https://raw.githubusercontent.com/bitnami/charts/pre-2022/bitnami
 
   # - name: myOCIRegistry
   #   url: myregistry.azurecr.io
@@ -15,11 +18,26 @@ environments:
     values:
       - storage:
           enabled: false
+        backup:
+          enabled: false
+        mariadb:
+          enabled: false
   cubieserver:
     values:
       - storage:
           enabled: true
-
+        backup:
+          enabled: true
+        mariadb:
+          enabled: true
+          # use XFS partition instead of btrfs
+          # Due to the Copy-on-Write concept, btrfs volumes are not well suited for workloads
+          # that frequently update their own files, e.g. databases.
+          # While CoW can be manually disabled for specific file and directories, this introduces
+          # additional operational overhead.
+          # https://wiki.archlinux.org/title/Btrfs#Disabling_CoW
+          # Thus, the production system has a separate xfs partition
+          storageclass: "local-path-xfs"
 ---
 
 releases:
@@ -28,6 +46,26 @@ releases:
   namespace: kube-system
   condition: storage.enabled
 
+# TODO: also manage backup cronjob with Helmfile
+- name: mariadb
+  chart: bitnami-pre-2022/mariadb
+  namespace: mariadb
+  createNamespace: true
+  condition: mariadb.enabled
+  # https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
+  values:
+    - image:
+        # https://github.com/bitnami/bitnami-docker-mariadb#supported-tags-and-respective-dockerfile-links
+        tag: "10.5"
+      auth:
+        existingSecret: mariadb-secret-lrsfknbo
+      primary:
+        service:
+          type: ClusterIP
+        persistence:
+          {{- with .Values.mariadb.storageclass }}
+          storageClass: "{{ . }}"
+          {{- end }}
 
 # helm upgrade --install kube-prometheus-stack -n monitoring -f monitoring/kube-prometheus-stack.values.yaml prometheus-community/kube-prometheus-stack
 - name: kube-prometheus-stack
