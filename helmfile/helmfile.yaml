@@ -126,14 +126,14 @@ releases:
   # https://gitea.com/gitea/helm-chart#upgrading
   # https://gitea.com/gitea/helm-chart/releases
   chart: "gitea/gitea"
-  version: "8.2.0"
+  version: "9.5.1"
   secrets:
     - ./environments/{{ .Environment.Name }}/gitea-values.secret.yaml
   # https://gitea.com/gitea/helm-chart/src/branch/main/values.yaml
   values:
   - image:
       # https://github.com/go-gitea/gitea/tags
-      tag: "1.19.2"
+      tag: "1.20.5"
       pullPolicy: IfNotPresent
       rootless: true
     gitea:
@@ -161,29 +161,43 @@ releases:
           LEVEL: "Info" # Trace, Debug, Info, Warn, Error, Critical, Fatal, None
           DISABLE_ROUTER_LOG: true # disable noisy HTTP access logs
 
+        # since v9 of the Helm chart "HA" mode is enabled by default
+        # the following settings switch back to standalone mode, see:
+        # https://gitea.com/gitea/helm-chart#single-pod-configurations
+        # https://gitea.com/gitea/helm-chart/issues/524
+        session:
+          PROVIDER: db
+        cache:
+          ADAPTER: memory
+        queue:
+          TYPE: level
+        indexer:
+          ISSUE_INDEXER_TYPE: bleve
+          REPO_INDEXER_ENABLED: true
+
       # https://docs.gitea.io/en-us/administration/config-cheat-sheet/#database-database
       additionalConfigFromEnvs:
-        # gitea-db-credentials is created from database.yaml
-        - name: ENV_TO_INI__DATABASE__DB_TYPE
+        # Secret "gitea-db-credentials" is created from gitea-extras chart
+        - name: GITEA__DATABASE__DB_TYPE
           value: "mysql"
-        - name: ENV_TO_INI__DATABASE__LOG_SQL
+        - name: GITEA__DATABASE__LOG_SQL
           value: "false"
-        - name: ENV_TO_INI__DATABASE__HOST
+        - name: GITEA__DATABASE__HOST
           valueFrom:
             secretKeyRef:
               name: gitea-db-credentials
               key: host
-        - name: ENV_TO_INI__DATABASE__NAME
+        - name: GITEA__DATABASE__NAME
           valueFrom:
             secretKeyRef:
               name: gitea-db-credentials
               key: name
-        - name: ENV_TO_INI__DATABASE__USER
+        - name: GITEA__DATABASE__USER
           valueFrom:
             secretKeyRef:
               name: gitea-db-credentials
               key: user
-        - name: ENV_TO_INI__DATABASE__PASSWD
+        - name: GITEA__DATABASE__PASSWD
           valueFrom:
             secretKeyRef:
               name: gitea-db-credentials
@@ -202,10 +216,11 @@ releases:
 
     persistence:
       enabled: true
-      # deploying Gitea with local storage because the Helm chart uses a StatefulSet anyway,
-      # meaning the pod cannot be re-scheduled onto another node
-      storageClass: "local-path" # TODO: local-path-btrfs
-      size: 10Gi # TODO: 1
+      storageClass: "local-path-btrfs"
+      size: 1
+
+    strategy:
+      type: Recreate
 
     resources:
       requests:
@@ -246,6 +261,10 @@ releases:
     memcached:
       enabled: false
     postgresql:
+      enabled: false
+    postgresql-ha:
+      enabled: false
+    redis-cluster:
       enabled: false
     test:
       enabled: false
