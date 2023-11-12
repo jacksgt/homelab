@@ -1,0 +1,11 @@
+# Ansible inventory for Homelab
+# https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html
+
+[linux]
+192.168.1.10 # hp-prodesk-g4
+
+[debian]
+192.168.1.10 # hp-prodesk-g4
+
+[linux:vars]
+ansible_user=root
