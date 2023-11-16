@@ -44,6 +44,9 @@ environments:
           storageclass: "local-path-xfs"
 ---
 
+helmDefaults:
+  historyMax: 3
+
 releases:
 - name: storage
   chart: ./storage
@@ -152,15 +155,16 @@ releases:
           DOMAIN: "" # set via overlay
           OFFLINE_MODE: true
           LANDING_PAGE: "explore"
+        actions:
+          ENABLED: true # as of v1.20, Gitea Actions are disabled by default
         service:
           # registrations needs to be enabled so new users can join via OIDC
           DISABLE_REGISTRATION: false
           # users should register themselves with the IDP, not in Gitea
           SHOW_REGISTRATION_BUTTON: false
+        # https://docs.gitea.com/next/administration/logging-config
         log:
           LEVEL: "Info" # Trace, Debug, Info, Warn, Error, Critical, Fatal, None
-          DISABLE_ROUTER_LOG: true # disable noisy HTTP access logs
-
         # since v9 of the Helm chart "HA" mode is enabled by default
         # the following settings switch back to standalone mode, see:
         # https://gitea.com/gitea/helm-chart#single-pod-configurations
