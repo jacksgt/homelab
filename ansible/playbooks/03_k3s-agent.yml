@@ -1,0 +1,37 @@
+---
+- name: Prepare k3s agents
+  hosts: k3s_agents
+  gather_facts: true
+  tasks:
+    - name: Download k3s binary x64
+      ansible.builtin.get_url:
+        url: https://github.com/k3s-io/k3s/releases/download/{{ k3s_version }}/k3s
+        checksum: sha256:https://github.com/k3s-io/k3s/releases/download/{{ k3s_version }}/sha256sum-amd64.txt
+        dest: /usr/local/bin/k3s
+        owner: root
+        group: root
+        mode: "0755"
+      when: ansible_facts.architecture == "x86_64"
+
+    - name: Copy K3s agent service file
+      ansible.builtin.template:
+        src: "k3s-agent.service.j2"
+        dest: "/etc/systemd/system/k3s-agent.service"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Copy K3s configuration
+      ansible.builtin.template:
+        src: "k3s.env.j2"
+        dest: "/etc/default/k3s-agent"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Enable and check K3s agent service
+      ansible.builtin.systemd:
+        name: k3s-agent
+        daemon_reload: true
+        state: restarted
+        enabled: true

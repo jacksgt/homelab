@@ -1,5 +1,14 @@
 ansible-play:
-    ansible-playbook playbook.yml -i inventory
+    ansible-playbook playbooks/*.yml -i inventory/hosts.ini
+
+ansible-dry-run:
+    # https://docs.ansible.com/ansible/2.9/user_guide/playbooks_checkmode.html
+    ansible-playbook playbooks/*.yml -i inventory/hosts.ini --check
 
 ansible-ping:
-    ansible all -m ping -i inventory
+    ansible all -m ping -i inventory/hosts.ini
+
+ansible-facts:
+    # https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html
+    # https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_vars_facts.html
+    ansible -m ansible.builtin.debug -a "var=ansible_facts" -i inventory/hosts.ini

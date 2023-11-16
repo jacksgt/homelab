@@ -1,0 +1,32 @@
+- name: Install tailscale daemon
+  hosts: "debian"
+  tasks:
+    - name: Download tailscale repo PGP key
+      ansible.builtin.get_url:
+        url: https://pkgs.tailscale.com/stable/debian/{{ ansible_facts['lsb']['codename'] }}.noarmor.gpg
+        dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+        owner: root
+        group: root
+        mode: "0644"
+    - name: Download tailscale repo list
+      ansible.builtin.get_url:
+        url: https://pkgs.tailscale.com/stable/debian/{{ ansible_facts['lsb']['codename'] }}.tailscale-keyring.list
+        dest: /etc/apt/sources.list.d/tailscale.list
+        owner: root
+        group: root
+        mode: "0644"
+    - name: Install tailscale package
+      ansible.builtin.apt:
+        name: tailscale
+        state: present
+        update_cache: true
+    - name: Enable tailscale daemon
+      ansible.builtin.systemd:
+        name: tailscaled.service
+        state: started
+        enabled: true
+    - name: Check tailscale status
+      ansible.builtin.command:
+        cmd: tailscale status
+      # Note: this command errors out when the tailscale client is not logged in
+      # the operator should manually fix this by running `tailscale up` on the machine.
