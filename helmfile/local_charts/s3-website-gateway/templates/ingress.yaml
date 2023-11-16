@@ -1,0 +1,36 @@
+{{- if .Values.ingress.create }}
+{{- $serviceName := (include "s3-website-gateway.fullname" .) }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "s3-website-gateway.fullname" . }}
+  labels:
+    {{- include "s3-website-gateway.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tlsEnabled }}
+  tls:
+    - hosts:
+      {{- range .Values.websites }}
+        - {{ .hostname | quote }}
+      {{- end }}
+      secretName: {{ printf "%s-tls-certs" (include "s3-website-gateway.fullname" .) }}
+  {{- end }}
+  rules:
+    {{- range .Values.websites }}
+    - host: {{ .hostname | quote }}
+      http:
+        paths:
+          - path: {{ .path | default "/" }}
+            pathType: "ImplementationSpecific"
+            backend:
+              service:
+                name: {{ $serviceName }}
+                port:
+                  name: "http"
+    {{- end }}
+{{- end }}

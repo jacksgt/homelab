@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "s3-website-gateway.fullname" . }}-nginx-config
+  labels:
+    {{- include "s3-website-gateway.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  # a default server that just serves the healthcheck endpoint
+  default.conf: |
+    server {
+        listen 8080 default_server;
+
+        location /_/healthz {
+            access_log off;
+            error_log /dev/stderr error;
+            return 200;
+        }
+
+        location / {
+            return 401;
+        }
+    }
+
+  {{- range .Values.websites }}
+  {{ .name }}.conf: |
+    server {
+        listen 8080;
+        server_name {{ .hostname }};
+
+        index index.html index.htm;
+
+        # TODO: redirect logs to another file, stream to logging server
+        # access_log off;
+
+        # do not serve hidden files (beginning with a period)
+        location ~ /\. {
+            error_log /dev/null;
+            log_not_found off;
+            deny all;
+        }
+
+        set $s3_bucket "{{ .bucket }}";
+
+        location / {
+            # only allow HEAD and GET requests for static websites
+            limit_except HEAD GET {
+                deny all;
+            }
+
+            # redirect */ to */index.html, so Minio backend finds the file
+            rewrite ^(.*)/$ $1/index.html break;
+
+            # hide these Minio headers
+            proxy_hide_header "X-AMZ-Bucket-Region";
+            proxy_hide_header "X-AMZ-Request-Id";
+
+            # TODO: re-enable cache
+            # let Nginx cache resources from Minio for one hour
+            # proxy_cache blog_cache;
+            # proxy_cache_valid 200 1h;
+            # proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;
+            # proxy_cache_revalidate on;
+            # proxy_cache_lock on;
+
+            add_header X-Proxy-Cache $upstream_cache_status;
+
+            # configure client cache for one day
+            expires 1d;
+            add_header Pragma public;
+            add_header Cache-Control "public";
+
+            # $uri already contains leading slash
+            proxy_pass {{ .endpoint }}/$s3_bucket$uri;
+
+            # use kubernetes DNS resolver
+            resolver kube-dns.kube-system.svc.cluster.local ipv6=off;
+        }
+    }
+  {{- end }}
