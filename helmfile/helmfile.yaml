@@ -10,6 +10,9 @@ repositories:
    url: https://dl.gitea.io/charts/
  - name: incubator
    url: https://charts.helm.sh/incubator
+ - name: jameswynn
+   url: https://jameswynn.github.io/helm-charts
+
 
   # - name: myOCIRegistry
   #   url: myregistry.azurecr.io
@@ -308,3 +311,173 @@ releases:
         bucket: adele
         endpoint: https://s3.cubieserver.de
         hostname: adeles.cooking
+
+  # Deploys an instance of https://github.com/gethomepage/homepage (https://github.com/gethomepage/homepage)
+- name: homepage
+  namespace: homepage
+  createNamespace: true
+  chart: "jameswynn/homepage" # unofficial helm chart: https://github.com/jameswynn/helm-charts/tree/main/charts/homepage
+  version: 1.2.1
+  values:
+    - image:
+        # https://github.com/benphelps/homepage/releases
+        repository: ghcr.io/gethomepage/homepage
+        tag: v0.8.0
+      enableRbac: true
+      serviceAccount:
+        create: true
+      resources:
+        requests:
+          memory: 100Mi
+          cpu: 10m
+        limits:
+          memory: 250Mi
+          cpu: 200m
+
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: { drop: ["ALL"] }
+
+      # TODO: redirect "cubieserver.de" to "www.cubieserver.de"
+      ingress:
+        main:
+          enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-production
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          hosts:
+          - host: www.cubieserver.de
+            paths:
+            - path: /
+              pathType: Prefix
+          tls:
+          - hosts:
+            - www.cubieserver.de
+            secretName: homepage-ingress-secret
+
+
+      # config files passed to homepage application
+      # https://gethomepage.dev/en/configs/services/
+      config:
+        # https://gethomepage.dev/en/configs/kubernetes/
+        kubernetes:
+          mode: cluster # use serviceaccount from container
+
+        # https://gethomepage.dev/en/configs/settings
+        settings:
+          title: "Cubieserver.de - Jack's Homelab"
+
+          # https://unsplash.com/photos/XKEObIMh0V0
+          background: "https://images.unsplash.com/photo-1506781994843-d2c500b1dde1?auto=format&fit=crop&w=2560&q=80"
+          backgroundOpacity: 0.4
+          color: zinc
+
+          headerStyle: boxed
+
+          hideVersion: true
+
+        # https://gethomepage.dev/en/configs/bookmarks
+        bookmarks:
+          - Links:
+            - "Jack's Blog":
+              - abbr: JH
+                href: https://blog.cubieserver.de
+            - "Homelab Git repository":
+              - abbr: HL
+                href: https://git.cubieserver.de/cubieserver/homelab
+            - "Status Page":
+              - abbr: SP
+                href: https://status.cubieserver.de
+
+        # https://gethomepage.dev/en/configs/services
+        # Icons from https://github.com/walkxcode/dashboard-icons are supported
+        services:
+          - "Web services":
+              - Nextcloud:
+                  href: https://cloud.cubieserver.de
+                  icon: nextcloud.png
+                  description: Platform for online file sharing, pictures, contacts, calendar and more
+                  namespace: nextcloud
+                  app: nextcloud
+              - Authentik:
+                  href: https://auth.cubieserver.de
+                  icon: authentik.png
+                  description: Account management & Authentication
+                  namespace: authentik
+                  app: authentik
+              - Gitea:
+                  href: https://git.cubieserver.de
+                  icon: gitea.png
+                  description: Git repository service
+                  namespace: gitea
+                  app: gitea
+              - Jellyfin:
+                  href: http://192.168.1.10:8096
+                  icon: jellyfin.png
+                  description: Media server
+                  namespace: jellyfin
+                  app: jellyfin
+
+          - "Backend services":
+              - ejabberd:
+                  icon: mdi-xmpp
+                  description: XMPP messaging server
+                  namespace: ejabberd
+                  app: ejabberd
+              - Minio:
+                  href: https://console-s3.cubieserver.de
+                  icon: minio.png
+                  description: S3 blob storage
+                  namespace: minio
+                  app: minio
+              - Traefik:
+                  icon: traefik.png
+                  description: HTTP proxy and router
+                  namespace: traefik
+                  app: traefik
+              - PostgreSQL:
+                  icon: postgres.png
+                  description: Postgres relational database
+                  namespace: postgres
+                  app: postgresql
+              - MariaDB:
+                  icon: mariadb.png
+                  description: MySQL-compatible SQL database
+                  namespace: mariadb
+                  app: mariadb
+              - k3s:
+                  icon: https://k3s.io/img/k3s-logo-light.svg
+                  description: Kubernetes cluster
+
+
+
+        # https://gethomepage.dev/en/configs/widgets
+        widgets:
+          - logo:
+              icon: https://blog.cubieserver.de/images/wheel.jpg
+
+          - greeting:
+              text_size: 2xl
+              text: "Jack's Homelab"
+
+          - search:
+              provider: duckduckgo
+              target: _self
+
+          # CURRENTLY DISABLED BECAUSE METRICS ARE NOT AVAILABLE
+          # show the kubernetes widget, with the cluster summary and individual nodes
+          # - kubernetes:
+          #     cluster:
+          #       show: true
+          #       cpu: true
+          #       memory: true
+          #       showLabel: false
+          #       label: "cluster"
+          #     nodes:
+          #       show: false
+          #       cpu: false
+          #       memory: false
+          #       showLabel: false
