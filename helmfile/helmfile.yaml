@@ -4,8 +4,6 @@
 repositories:
  - name: prometheus-community
    url: https://prometheus-community.github.io/helm-charts
- - name: bitnami-pre-2022
-   url: https://raw.githubusercontent.com/bitnami/charts/pre-2022/bitnami
  - name: gitea
    url: https://dl.gitea.io/charts/
  - name: incubator
@@ -61,24 +59,37 @@ releases:
 
 # TODO: also manage backup cronjob with Helmfile
 - name: mariadb
-  chart: bitnami-pre-2022/mariadb
+  chart: bitnamicharts-oci/mariadb
+  version: 14.1.2
   namespace: mariadb
   createNamespace: true
-  condition: mariadb.enabled
+  secrets:
+    - ./environments/{{ .Environment.Name }}/mariadb-values.secret.yaml
   # https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
   values:
     - image:
-        # https://github.com/bitnami/bitnami-docker-mariadb#supported-tags-and-respective-dockerfile-links
-        tag: "10.5"
+        # https://hub.docker.com/r/bitnami/mariadb/tags
+        tag: "10.6"
+        # IMPORTANT: check Nextcloud supported versions!
+        # https://docs.nextcloud.com/server/latest/admin_manual/installation/system_requirements.html
       auth:
-        existingSecret: mariadb-secret-lrsfknbo
+        # "rootPassword" set in secret values.yaml
+      # sleep infinity + disable health probes
+      # diagnosticMode:
+      #   enabled: true
       primary:
         service:
           type: ClusterIP
         persistence:
-          {{- with .Values.mariadb.storageclass }}
-          storageClass: "{{ . }}"
-          {{- end }}
+          storageClass: local-path-xfs
+          size: "1"
+          annotations:
+            # backups are handled with mysqldump for consistency
+            # (which is not guaranteed with filesystem-level backups)
+            backup-enabled: "false"
+      # TODO:
+      # extraDeploy:
+      # - kind: DatabaseInstance
 
 # helm upgrade --install kube-prometheus-stack -n monitoring -f monitoring/kube-prometheus-stack.values.yaml prometheus-community/kube-prometheus-stack
 - name: kube-prometheus-stack
@@ -491,9 +502,9 @@ releases:
   version: 13.2.9
   namespace: postgres
   createNamespace: true
-  # https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
   secrets:
     - ./environments/{{ .Environment.Name }}/postgres-values.secret.yaml
+  # https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
   values:
     - fullnameOverride: "postgres"
       image:
