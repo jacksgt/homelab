@@ -12,6 +12,9 @@ repositories:
    url: https://charts.helm.sh/incubator
  - name: jameswynn
    url: https://jameswynn.github.io/helm-charts
+ - name: bitnamicharts-oci
+   url: docker.io/bitnamicharts
+   oci: true
 
 
   # - name: myOCIRegistry
@@ -484,11 +487,8 @@ releases:
 
 # TODO: also manage backup cronjob with Helmfile
 - name: postgres
-  chart: bitnami-pre-2022/postgresql
-  version: 11.0.2
-  # TODO: use OCI instead?
-  # chart: oci://registry-1.docker.io/bitnamicharts/postgresql
-  # oci://registry-1.docker.io/bitnamicharts/postgresql
+  chart: bitnamicharts-oci/postgresql
+  version: 13.2.9
   namespace: postgres
   createNamespace: true
   # https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
@@ -496,6 +496,14 @@ releases:
     - ./environments/{{ .Environment.Name }}/postgres-values.secret.yaml
   values:
     - fullnameOverride: "postgres"
+      image:
+        # https://hub.docker.com/r/bitnami/postgresql/tags
+        registry: docker.io
+        repository: bitnami/postgresql
+        tag: 14-debian-11
+      # sleep infinity + disable health probes
+      # diagnosticMode:
+      #   enabled: true
       auth:
         # postgresPassword set in secret.yaml
       serviceAccount:
