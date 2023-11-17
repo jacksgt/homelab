@@ -481,3 +481,38 @@ releases:
           #       cpu: false
           #       memory: false
           #       showLabel: false
+
+# TODO: also manage backup cronjob with Helmfile
+- name: postgres
+  chart: bitnami-pre-2022/postgresql
+  version: 11.0.2
+  # TODO: use OCI instead?
+  # chart: oci://registry-1.docker.io/bitnamicharts/postgresql
+  # oci://registry-1.docker.io/bitnamicharts/postgresql
+  namespace: postgres
+  createNamespace: true
+  # https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
+  secrets:
+    - ./environments/{{ .Environment.Name }}/postgres-values.secret.yaml
+  values:
+    - fullnameOverride: "postgres"
+      auth:
+        # postgresPassword set in secret.yaml
+      serviceAccount:
+        create: true
+      # TODO: requests: {}
+      primary:
+        service:
+          type: ClusterIP
+        persistence:
+          storageClass: "local-path-xfs"
+          size: 1
+          annotations:
+            # backups are handled via pgdump to be fully consistent
+            # (which is not guaranteed with filesystem-level backups)
+            backup-enabled: "false"
+      # TODO:
+      # extraDeploy:
+      # - apiVersion: kci.rocks/v1beta1
+      #   kind: DbInstance
+      #   ...
