@@ -4,14 +4,28 @@
     - name: Install basic system utilities
       ansible.builtin.apt:
         name:
-          - nload
-          - iotop
-          - htop
-          - nano
+          - btrfs-compsize
           - curl
+          - htop
+          - iotop
+          - jq
+          - nano
+          - nload
           - psmisc # killall, pgrep etc.
+          - rsync
+          - xfsprogs
         state: present
         update_cache: true
+
+    - name: Install unattended-upgrades
+      ansible.builtin.apt:
+        name:
+          - unattended-upgrades
+          - apt-listchanges
+        state: present
+
+# TODO: set up email config on the host
+# https://wiki.debian.org/UnattendedUpgrades
 
 # TODO: Take periodic snapshots of root filesystem with "snapper"
 

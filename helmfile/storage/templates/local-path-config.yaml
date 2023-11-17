@@ -13,7 +13,7 @@ data:
         "paths":[]
       },
       {
-        "node": "intel-nuc-v7",
+        "node": "hp-prodesk-g4",
         "paths":["/data/btrfs/local-path-provisioner", "/data/xfs/local-path-provisioner"]
       }
       ]

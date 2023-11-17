@@ -3,8 +3,9 @@
 Description=Lightweight Kubernetes
 Documentation=https://k3s.io
 After=network-online.target
+After=network-online.target # hard depdendency
 After=tailscaled.service
-Wants=tailscaled.service # optional dependecy
+Requires=tailscaled.service # hard dependency
 
 [Service]
 Type=notify
@@ -12,7 +13,10 @@ EnvironmentFile=-/etc/default/%N
 EnvironmentFile=-/etc/sysconfig/%N
 EnvironmentFile=-/etc/systemd/system/%N.service.env
 ExecStartPre=/bin/sh -xc '! /usr/bin/systemctl is-enabled --quiet nm-cloud-setup.service'
-ExecStart=/usr/local/bin/k3s agent
+ExecStart=/usr/local/bin/k3s agent \
+                             --node-ip {{ tailscale_ip }} \
+                             --flannel-iface {{ tailscale_interface }}
+
 KillMode=process
 Delegate=yes
 # Having non-zero Limit*s causes performance problems due to accounting overhead
