@@ -13,6 +13,8 @@ repositories:
  - name: bitnamicharts-oci
    url: docker.io/bitnamicharts
    oci: true
+ - name: authentik
+   url: https://charts.goauthentik.io/
 
 
   # - name: myOCIRegistry
@@ -110,6 +112,7 @@ releases:
   values:
   - monitoring/prometheus-adapter.values.yaml
 
+# TODO: use `extraDeploy` on the gitea chart instead of this
 - name: gitea-extras
   namespace: gitea
   chart: incubator/raw
@@ -535,3 +538,124 @@ releases:
       # - apiVersion: kci.rocks/v1beta1
       #   kind: DbInstance
       #   ...
+
+- name: authentik
+  # https://github.com/goauthentik/authentik/releases
+  # https://goauthentik.io/docs/releases
+  # https://github.com/goauthentik/helm
+  # note Authentik releases and Helm chart releases are in-sync
+  chart: authentik/authentik
+  version: "2023.10.3"
+  namespace: authentik
+  createNamespace: true
+  secrets:
+    - ./environments/{{ .Environment.Name }}/authentik-values.secret.yaml
+  # https://github.com/goauthentik/helm/blob/main/charts/authentik/values.yaml
+  values:
+    - authentik:
+        # https://goauthentik.io/docs/installation/configuration
+        avatars: "none"
+        log_level: "info" # trace, debug, info, warning, error
+        # "secret_key" set from secret-helm-values
+        error_reporting:
+          enabled: false
+        disable_update_check: true
+        disable_startup_analytics: true
+        postgresql: null # postgres config is set via environment variables
+        # "secret_key" is set in secret values.yaml
+
+      envFrom:
+        - secretRef:
+            name: authentik-db-credentials
+
+      livenessProbe:
+        enabled: true
+        initialDelaySeconds: 60
+        periodSeconds: 30
+
+      ingress:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-production
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        hosts:
+        - host: auth.cubieserver.de
+          paths:
+          - path: /
+            pathType: Prefix
+        tls:
+        - hosts:
+          - auth.cubieserver.de
+          secretName: authentik-ingress-cert
+
+      resources:
+        server:
+          requests:
+            memory: 450Mi
+            cpu: 10m
+          limits:
+            memory: 900Mi
+        worker:
+          requests:
+            memory: 250Mi
+            cpu: 10m
+          limits:
+            memory: 500Mi
+            cpu: 100m
+
+      # deploy Bitnami's Redis chart as a dependency
+      redis:
+        enabled: true
+        # redis is only used as a cache / queue, no need for persistence
+        # disabling persistence uses emptyDir instead
+        # https://github.com/bitnami/charts/blob/master/bitnami/redis/README.md
+        master:
+          persistence:
+            enabled: false
+
+      # we deploy our own postgres instance
+      poostgresql:
+        enabled: false
+
+      # for server
+      securityContext:
+        runAsNonRoot: true
+      podSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities: { drop: ["ALL"] }
+        readOnlyRootFilesystem: true
+
+      # for worker
+      worker:
+        securityContext:
+          runAsNonRoot: true
+        podSecurityContext:
+          allowPrivilegeEscalation: false
+          capabilities: { drop: ["ALL"] }
+          readOnlyRootFilesystem: true
+
+      prometheus:
+        serviceMonitor:
+          create: false # TODO: enable metrics
+
+- name: authentik-extras
+  namespace: authentik
+  chart: incubator/raw
+  values:
+  - resources:
+    - apiVersion: kci.rocks/v1beta1
+      kind: Database
+      metadata:
+        name: authentik
+      spec:
+        deletionProtected: true
+        instance: pg-instance-prod
+        secretName: authentik-db-credentials
+        secretsTemplates:
+          # https://goauthentik.io/docs/installation/configuration#postgresql-settings
+          AUTHENTIK_POSTGRESQL__HOST: {{` "{{ .DatabaseHost }}" `}}
+          AUTHENTIK_POSTGRESQL__NAME: {{` "{{ .DatabaseName }}" `}}
+          AUTHENTIK_POSTGRESQL__USER: {{` "{{ .UserName }}" `}}
+          AUTHENTIK_POSTGRESQL__PORT: {{` "{{ .DatabasePort }}" `}}
+          AUTHENTIK_POSTGRESQL__PASSWORD: {{` "{{ .Password }}" `}}
+          AUTHENTIK_POSTGRESQL__USE_PGBOUNCER: "false"
