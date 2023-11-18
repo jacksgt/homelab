@@ -15,6 +15,8 @@ repositories:
    oci: true
  - name: authentik
    url: https://charts.goauthentik.io/
+ - name: nextcloud
+   url: https://nextcloud.github.io/helm/
 
 
   # - name: myOCIRegistry
@@ -659,3 +661,149 @@ releases:
           AUTHENTIK_POSTGRESQL__PORT: {{` "{{ .DatabasePort }}" `}}
           AUTHENTIK_POSTGRESQL__PASSWORD: {{` "{{ .Password }}" `}}
           AUTHENTIK_POSTGRESQL__USE_PGBOUNCER: "false"
+
+- name: nextcloud
+  namespace: nextcloud
+  # https://github.com/nextcloud/helm/tree/main/charts/nextcloud
+  chart: nextcloud/nextcloud
+  version: 4.5.0
+  secrets:
+    - ./environments/{{ .Environment.Name }}/nextcloud-values.secret.yaml
+  values:
+  - image:
+      # https://github.com/nextcloud/server/tags
+      # https://hub.docker.com/_/nextcloud/?tab=tags
+      tag: "27.1.3-apache"
+
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      hosts:
+        - cloud.cubieserver.de
+      tls:
+        - hosts:
+          - cloud.cubieserver.de
+          secretName: nextcloud-ingress-secret
+
+    nextcloud:
+      host: cloud.cubieserver.de
+
+      # dummy credentials that are only used for the first setup (not respected later)
+      username: "admin"
+      password: "hunter2"
+
+      # the following are set in secret values.yaml
+      # mail:
+      #   enabled: false
+      #   fromAddress: user
+      #   domain: domain.com
+      #   smtp:
+      #     host: domain.com
+      #     secure: ssl
+      #     port: 465
+      #     authtype: LOGIN
+      #     name: user
+      #     password: pass
+
+      configs:
+        custom.config.php: |-
+          <?php
+          $CONFIG = array (
+            /* https://github.com/nextcloud/server/blob/c364b0cb193f66ad15e2950c27113b40037d1bf6/config/config.sample.php#L747-L757 */
+            'check_data_directory_permissions' => false,
+          );
+
+      podSecurityContext:
+        runAsUser: 33 # www-data
+        runAsGroup: 33
+        fsGroup: 33
+        runAsNonRoot: true
+
+      securityContext:
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false # this might break PHP occ shell
+        capabilities:
+          drop: ["ALL"]
+
+      # Mount writeable directories so Apache and friends start up properly
+      extraVolumes:
+       - name: tmp
+         emptyDir: {}
+      extraVolumeMounts:
+       - name: tmp
+         mountPath: "/tmp"
+         subPath: "tmp"
+       - name: tmp
+         mountPath: "/var/tmp"
+         subPath: "var-tmp"
+       - name: tmp
+         mountPath: "/var/run"
+         subPath: "var-run"
+
+    resources:
+      requests:
+        memory: 500Mi
+        cpu: 0.5
+      limits:
+        memory: 4Gi
+
+    # First initialization and subsequent upgrades can take a while, enable startup probe
+    startupProbe:
+      enabled: true
+
+    internalDatabase:
+      enabled: false
+    externalDatabase:
+      enabled: true
+      # hardcoded for now, waiting for https://github.com/nextcloud/helm/pull/366
+      database: "nextcloud_test_nextcloud"
+      host: "mariadb.mariadb.svc.cluster.local"
+      existingSecret:
+        enabled: true
+        secretName: nextcloud-db-credentials
+        usernameKey: username
+        passwordKey: password
+
+    # Note to self: Redis is disabled by default
+    # redis:
+    #   enabled: true
+    #   # redis is only used as a cache, no need for persistence
+    #   # disabling persistence uses emptyDir instead
+    #   # https://github.com/bitnami/charts/blob/master/bitnami/redis/README.md
+    #   master:
+    #     persistence:
+    #       enabled: false
+
+    phpClientHttpsFix:
+      enabled: true
+      protocol: https
+
+    # separate ServiceAccount for Nextcloud pod
+    rbac:
+      enabled: true
+
+    persistence:
+      enabled: true
+      storageClass: "local-path-btrfs"
+
+    # sidecar
+    cronjob:
+      enabled: true
+      resources:
+        requests:
+          cpu: 1m
+          memory: 1Mi
+        limits:
+          cpu: 1
+          memory: 520Mi
+      securityContext:
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+          add:
+            # required permissions so busybox crond runs successfully, see `man 2 setgroups`
+            # > crond: can't set groups: Operation not permitted
+            - "SETGID"
