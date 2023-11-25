@@ -9,10 +9,12 @@
           - htop
           - iotop
           - jq
+          - lm-sensors
           - nano
           - nload
           - psmisc # killall, pgrep etc.
           - rsync
+          - strace
           - xfsprogs
         state: present
         update_cache: true
