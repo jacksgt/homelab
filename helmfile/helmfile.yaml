@@ -716,12 +716,11 @@ releases:
           );
 
       podSecurityContext:
-        runAsUser: 33 # www-data
-        runAsGroup: 33
-        fsGroup: 33
-        runAsNonRoot: true
+        fsGroup: 33 # www-data
 
       securityContext:
+        runAsUser: 33 # www-data
+        runAsGroup: 33
         readOnlyRootFilesystem: true
         allowPrivilegeEscalation: false # this might break PHP occ shell
         capabilities:
@@ -801,9 +800,6 @@ releases:
       securityContext:
         readOnlyRootFilesystem: true
         allowPrivilegeEscalation: false
-        capabilities:
-          drop: ["ALL"]
-          add:
-            # required permissions so busybox crond runs successfully, see `man 2 setgroups`
-            # > crond: can't set groups: Operation not permitted
-            - "SETGID"
+        # busybox' crond must run as root, otherwise the following errors occur:
+        # > crond: can't set groups: Operation not permitted
+        runAsUser: 0

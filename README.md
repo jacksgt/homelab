@@ -193,7 +193,22 @@ EOF
 
 https://stackoverflow.com/a/47776588
 
+## Nextcloud
 
+Reset bruteforce rate-limiting ("Cannot login: Too may requests (429)"):
+
+```
+php ./occ security:bruteforce:reset 0.0.0.0
+```
+
+or via SQL:
+
+```
+SELECT * FROM oc_bruteforce_attempts;
+TRUNCATE TABLE oc_bruteforce_attempts;
+```
+
+https://help.nextcloud.com/t/cannot-login-too-many-requests/100905/31
 
 ## Selfhosted Applications
 
