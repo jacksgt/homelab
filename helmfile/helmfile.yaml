@@ -17,6 +17,9 @@ repositories:
    url: https://charts.goauthentik.io/
  - name: nextcloud
    url: https://nextcloud.github.io/helm/
+ - name: frooodle
+   url: docker.io/frooodle
+   oci: true
 
 
   # - name: myOCIRegistry
@@ -434,11 +437,17 @@ releases:
                   namespace: gitea
                   app: gitea
               - Jellyfin:
-                  href: http://192.168.1.10:8096
+                  href: https://media.cubieserver.de
                   icon: jellyfin.png
                   description: Media server
                   namespace: jellyfin
                   app: jellyfin
+              - Stirling PDF Tools:
+                  href: https://pdftools.cubieserver.de
+                  icon: https://raw.githubusercontent.com/Frooodle/Stirling-PDF/main/docs/stirling.png
+                  description: Online editor for PDF documents
+                  namespace: stirling-pdf
+                  app: stirling-pdf-chart
 
           - "Backend services":
               - ejabberd:
@@ -803,3 +812,82 @@ releases:
         # busybox' crond must run as root, otherwise the following errors occur:
         # > crond: can't set groups: Operation not permitted
         runAsUser: 0
+
+- name: stirling-pdf
+  namespace: stirling-pdf
+  createNamespace: true
+  chart: frooodle/stirling-pdf-chart
+  labels:
+    name: stirling-pdf
+  version: 1.0.0
+  # https://github.com/Frooodle/Stirling-PDF/blob/main/chart/stirling-pdf/values.yaml
+  # https://www.stirlingtools.com/docs/Advanced%20Configuration/How%20to%20add%20configurations
+  values:
+  - fullnameOverride: "stirling-pdf" # override default name "stirling-pdf-stirling-pdf-chart"
+    image:
+      # https://github.com/Frooodle/Stirling-PDF/releases
+      # https://hub.docker.com/r/frooodle/s-pdf/tags
+      repository: "ghcr.io/frooodle/s-pdf"
+      tag: "0.17.2"
+
+    envs:
+      - name: UI_APP_NAME
+        value: "PDF Tools"
+      - name: UI_HOME_DESCRIPTION
+        value: "Cubieserver hosted version of Stirling's PDF tools for editing PDF documents."
+      - name: UI_APP_NAVBAR_NAME
+        value: "Cubieserver PDF Tools"
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 950Mi
+      requests:
+        cpu: 50m
+        memory: 200Mi # Java is memory hungry...
+
+    probes:
+      liveness:
+        initialDelaySeconds: 30 # should use a startup probe instead...
+
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      hosts:
+        - name: pdftools.cubieserver.de
+          path: /
+          tls: true
+          tlsSecret: stirling-pdf-ingress-secret
+
+    deployment:
+      extraVolumes:
+        - name: dummy
+          emptyDir: {}
+      extraVolumeMounts:
+        - mountPath: /usr/share/tesseract-ocr
+          name: dummy
+          subPath: tesseract-ocr
+        - mountPath: /logs
+          name: dummy
+          subPath: logs
+        - mountPath: /tmp
+          name: dummy
+          subPath: tmp
+        - mountPath: /configs
+          name: dummy
+          subPath: configs
+
+    # pod
+    securityContext:
+      fsGroup: 65534
+
+    # container
+    containerSecurityContext:
+      runAsUser: 65534 # nobody
+      runAsGroup: 65534 # nogroup
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]

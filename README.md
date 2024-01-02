@@ -15,6 +15,14 @@ An overview of the currently running services can be found on the [Cubieserver h
 
 ## Tips & Tricks
 
+### Traefik
+
+To access traefik dashboard at <http://localhost:9000/dashboard/>, run:
+
+```sh
+ns=traefik; kubectl -n "$ns" port-forward $(kubectl -n "$ns" get pods --selector "app.kubernetes.io/name=traefik" --output=name) 9000:9000
+```
+
 ### PostgreSQL Size
 
 Get size of Postgres databases:
