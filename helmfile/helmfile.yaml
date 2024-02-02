@@ -163,7 +163,7 @@ releases:
   values:
   - image:
       # https://github.com/go-gitea/gitea/tags
-      tag: "1.20.5"
+      tag: "1.21.5"
       pullPolicy: IfNotPresent
       rootless: true
     gitea:
@@ -346,7 +346,7 @@ releases:
     - image:
         # https://github.com/benphelps/homepage/releases
         repository: ghcr.io/gethomepage/homepage
-        tag: v0.8.0
+        tag: v0.8.7
       enableRbac: true
       serviceAccount:
         create: true
@@ -684,7 +684,7 @@ releases:
   - image:
       # https://github.com/nextcloud/server/tags
       # https://hub.docker.com/_/nextcloud/?tab=tags
-      tag: "27.1.3-apache"
+      tag: "28.0.1-apache"
 
     ingress:
       enabled: true
@@ -822,15 +822,15 @@ releases:
   labels:
     name: stirling-pdf
   version: 1.0.0
-  # https://github.com/Frooodle/Stirling-PDF/blob/main/chart/stirling-pdf/values.yaml
+  # https://github.com/stirling-tools/Stirling-PDF/blob/main/chart/stirling-pdf/values.yaml
   # https://www.stirlingtools.com/docs/Advanced%20Configuration/How%20to%20add%20configurations
   values:
   - fullnameOverride: "stirling-pdf" # override default name "stirling-pdf-stirling-pdf-chart"
     image:
-      # https://github.com/Frooodle/Stirling-PDF/releases
-      # https://hub.docker.com/r/frooodle/s-pdf/tags
-      repository: "ghcr.io/frooodle/s-pdf"
-      tag: "0.17.2"
+      # https://github.com/stirling-tools/Stirling-PDF/releases
+      # https://github.com/Stirling-Tools/Stirling-PDF/pkgs/container/s-pdf
+      repository: "ghcr.io/stirling-tools/s-pdf"
+      tag: "0.20.1"
 
     envs:
       - name: UI_APP_NAME
