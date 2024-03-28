@@ -104,7 +104,7 @@ releases:
 - name: kube-prometheus-stack
   namespace: monitoring
   createNamespace: true
-  version: 45.25.0 # Prometheus version v2.42.0
+  version: 45.25.0
   chart: prometheus-community/kube-prometheus-stack
   # https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
   values:
@@ -684,7 +684,7 @@ releases:
   - image:
       # https://github.com/nextcloud/server/tags
       # https://hub.docker.com/_/nextcloud/?tab=tags
-      tag: "28.0.1-apache"
+      tag: "28.0.3-apache"
 
     ingress:
       enabled: true

@@ -65,6 +65,7 @@ kubeStateMetrics:
   enabled: true
 
 kube-state-metrics:
+  fullnameOverride: "kube-state-metrics"
   metricDenylist:
   - '(.+)_created$'
   - '(.+)_annotations$'
@@ -75,7 +76,7 @@ kube-state-metrics:
   # https://github.com/prometheus-community/helm-charts/blob/95c450b72c24fdc7724516d9d1302d4aea27932e/charts/kube-state-metrics/values.yaml#L299
   collectors:
   # - certificatesigningrequests
-  - configmaps
+  # - configmaps
   - cronjobs
   - daemonsets
   - deployments
@@ -87,7 +88,7 @@ kube-state-metrics:
   # - limitranges
   # - mutatingwebhookconfigurations
   - namespaces
-  - networkpolicies
+  # - networkpolicies
   - nodes
   - persistentvolumeclaims
   - persistentvolumes
@@ -95,11 +96,11 @@ kube-state-metrics:
   - pods
   # - replicasets
   # - replicationcontrollers
-  - resourcequotas
-  - secrets
-  - services
+  # - resourcequotas
+  # - secrets
+  # - services
   - statefulsets
-  - storageclasses
+  # - storageclasses
   # - validatingwebhookconfigurations
   # - volumeattachments
 
@@ -108,16 +109,22 @@ nodeExporter:
 
 # https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-node-exporter/values.yaml
 prometheus-node-exporter:
+  fullnameOverride: "node-exporter"
   # https://github.com/prometheus/node_exporter#collectors
   extraArgs:
-    - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/kubelet/.+|/run/k3s/containerd/.*)($|/)"
-    - "--collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+    - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/kubelet/.+|run/.*)($|/)"
+    - "--collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|ramfs|rpc_pipefs|shmfs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
     - "--collector.diskstats.ignored-devices=^(ram|loop|fd|(h|s|v)d[a-z]|nvme\\d+n\\d+p)\\d+$"
     - "--collector.arp.device-exclude=.+"
     - "--collector.qdisk.device-exclude=.+"
 
   prometheus:
     monitor:
+      relabelings:
+      # add the Kubernetes "node" as a label as well, otherwise we get just the instance (e.g. "1.2.3.4:10800")
+      - sourceLabels: [__meta_kubernetes_pod_node_name]
+        action: replace
+        targetLabel: node
       metricRelabelings:
       - sourceLabels: [__name__]
         separator: ;
@@ -135,6 +142,14 @@ prometheusOperator:
 
 prometheus:
   enabled: true
+  fullnameOverride: "prometheus"
+
+  # https://github.com/prometheus/prometheus/releases
+  image:
+    repository: quay.io/prometheus/prometheus
+    tag: "2.51.0"
+    pullPolicy: IfNotPresent
+
   ingress:
     enabled: true
     annotations:
@@ -151,8 +166,14 @@ prometheus:
   prometheusSpec:
     nodeSelector:
       cubieserver.de/local-storage: "true"
-    retention: 1d # TODO
-    resources: {}
+    retention: 90d
+    resources:
+      requests:
+        cpu: 100m
+        memory: 250Mi
+      limits:
+        cpu: 500m
+        memory: 500Mi
     storageSpec:
       volumeClaimTemplate:
         spec:

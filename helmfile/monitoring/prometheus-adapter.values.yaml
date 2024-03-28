@@ -35,11 +35,11 @@ rules:
     cpu:
       containerQuery: |
         sum by (<<.GroupBy>>) (
-          rate(container_cpu_usage_seconds_total{container!="",<<.LabelMatchers>>}[3m])
+          rate(container_cpu_usage_seconds_total{container!="",<<.LabelMatchers>>}[2m])
         )
       nodeQuery: |
-        sum  by (<<.GroupBy>>) (
-          rate(node_cpu_seconds_total{mode!="idle",mode!="iowait",mode!="steal",<<.LabelMatchers>>}[3m])
+        sum by (<<.GroupBy>>) (
+          rate(node_cpu_seconds_total{mode!="idle",mode!="steal",<<.LabelMatchers>>}[2m])
         )
       resources:
         overrides:
@@ -53,13 +53,13 @@ rules:
     memory:
       containerQuery: |
         sum by (<<.GroupBy>>) (
-          avg_over_time(container_memory_working_set_bytes{container!="",<<.LabelMatchers>>}[3m])
+          avg_over_time(container_memory_rss{container!="",<<.LabelMatchers>>}[2m])
         )
       nodeQuery: |
         sum by (<<.GroupBy>>) (
-          avg_over_time(node_memory_MemTotal_bytes{<<.LabelMatchers>>}[3m])
+          avg_over_time(node_memory_MemTotal_bytes{<<.LabelMatchers>>}[2m])
           -
-          avg_over_time(node_memory_MemAvailable_bytes{<<.LabelMatchers>>}[3m])
+          avg_over_time(node_memory_MemAvailable_bytes{<<.LabelMatchers>>}[2m])
         )
       resources:
         overrides:
@@ -70,4 +70,4 @@ rules:
           pod:
             resource: pod
       containerLabel: container
-    window: 3m
+    window: 2m
