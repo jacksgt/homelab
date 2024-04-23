@@ -22,6 +22,8 @@ repositories:
    oci: true
  - name: pajikos
    url: https://pajikos.github.io/home-assistant-helm-chart/
+ - name: traefik
+   url: https://helm.traefik.io/traefik
 
 
   # - name: myOCIRegistry
@@ -109,6 +111,15 @@ releases:
   # https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
   values:
   - monitoring/kube-prometheus-stack.values.yaml
+
+- name: traefik
+  namespace: traefik
+  createNamespace: true
+  # https://github.com/traefik/traefik-helm-chart/tags
+  version: 24.0.0
+  chart: traefik/traefik
+  values:
+  - traefik/traefik.values.yaml
 
 # helm upgrade --install prometheus-adapter -n monitoring -f monitoring/prometheus-adapter.values.yaml prometheus-community/prometheus-adapter
 - name: prometheus-adapter
@@ -344,9 +355,9 @@ releases:
   version: 1.2.1
   values:
     - image:
-        # https://github.com/benphelps/homepage/releases
+        # https://github.com/gethomepage/homepage/releases
         repository: ghcr.io/gethomepage/homepage
-        tag: v0.8.7
+        tag: v0.8.10
       enableRbac: true
       serviceAccount:
         create: true
@@ -365,7 +376,6 @@ releases:
         readOnlyRootFilesystem: true
         capabilities: { drop: ["ALL"] }
 
-      # TODO: redirect "cubieserver.de" to "www.cubieserver.de"
       ingress:
         main:
           enabled: true
@@ -497,20 +507,19 @@ releases:
               provider: duckduckgo
               target: _self
 
-          # CURRENTLY DISABLED BECAUSE METRICS ARE NOT AVAILABLE
           # show the kubernetes widget, with the cluster summary and individual nodes
-          # - kubernetes:
-          #     cluster:
-          #       show: true
-          #       cpu: true
-          #       memory: true
-          #       showLabel: false
-          #       label: "cluster"
-          #     nodes:
-          #       show: false
-          #       cpu: false
-          #       memory: false
-          #       showLabel: false
+          - kubernetes:
+              cluster:
+                show: true
+                cpu: true
+                memory: true
+                showLabel: false
+                label: "cluster"
+              nodes:
+                show: false
+                cpu: false
+                memory: false
+                showLabel: false
 
 # TODO: also manage backup cronjob with Helmfile
 - name: postgres
@@ -649,7 +658,6 @@ releases:
 
       prometheus:
         serviceMonitor:
-          create: false # TODO: enable metrics
 
 - name: authentik-extras
   namespace: authentik

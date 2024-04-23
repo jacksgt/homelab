@@ -167,6 +167,7 @@ prometheus:
     nodeSelector:
       cubieserver.de/local-storage: "true"
     retention: 90d
+
     resources:
       requests:
         cpu: 100m
@@ -174,6 +175,10 @@ prometheus:
       limits:
         cpu: 500m
         memory: 500Mi
+    # https://stackoverflow.com/a/65648944
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
     storageSpec:
       volumeClaimTemplate:
         spec:

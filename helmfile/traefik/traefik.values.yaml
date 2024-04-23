@@ -1,0 +1,42 @@
+# https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
+additionalArguments:
+# Allow creation of services even if no endpoints are available (results in 503 instead of hard-to-debug 404 response)
+- --providers.kubernetesIngress.allowEmptyServices=true
+deployment:
+  replicas: 1
+image:
+  # https://github.com/traefik/traefik/blob/master/CHANGELOG.md
+  tag: v2.9.6
+ingressRoute:
+  dashboard:
+    enabled: true
+metrics:
+  prometheus:
+    service:
+      enabled: true # use a separate service (not the one available to the Internet) to expose metrics
+    headerLabels:
+      host: X-Forwarded-Host # add "host" as a label on the metrics
+    addEntryPointsLabels: false
+    addRoutersLabels: true
+    addServicesLabels: true
+    serviceMonitor:
+      interval: 30s
+      metricRelabelings: []
+      relabelings:
+        # show which node handled the request
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          separator: ;
+          regex: ^(.*)$
+          targetLabel: node
+          replacement: $1
+          action: replace
+ports:
+  # redirect HTTP (80) to HTTPS (443)
+  web:
+    redirectTo: websecure
+  websecure:
+    tls:
+      enabled: true
+logs:
+  general:
+    level: "ERROR" # DEBUG, PANIC, FATAL, ERROR, WARN, and INFO.
