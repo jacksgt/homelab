@@ -116,7 +116,7 @@ releases:
   namespace: traefik
   createNamespace: true
   # https://github.com/traefik/traefik-helm-chart/tags
-  version: 24.0.0
+  version: 27.0.2
   chart: traefik/traefik
   values:
   - traefik/traefik.values.yaml

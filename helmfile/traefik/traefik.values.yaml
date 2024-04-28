@@ -2,11 +2,14 @@
 additionalArguments:
 # Allow creation of services even if no endpoints are available (results in 503 instead of hard-to-debug 404 response)
 - --providers.kubernetesIngress.allowEmptyServices=true
+# add "host" as a label on the metrics
+# https://doc.traefik.io/traefik/observability/metrics/prometheus/#headerlabels
+- --metrics.prometheus.headerlabels.host=X-Forwarded-Host
 deployment:
   replicas: 1
 image:
   # https://github.com/traefik/traefik/blob/master/CHANGELOG.md
-  tag: v2.9.6
+  tag: v2.11.2
 ingressRoute:
   dashboard:
     enabled: true
@@ -14,8 +17,6 @@ metrics:
   prometheus:
     service:
       enabled: true # use a separate service (not the one available to the Internet) to expose metrics
-    headerLabels:
-      host: X-Forwarded-Host # add "host" as a label on the metrics
     addEntryPointsLabels: false
     addRoutersLabels: true
     addServicesLabels: true
@@ -33,7 +34,8 @@ metrics:
 ports:
   # redirect HTTP (80) to HTTPS (443)
   web:
-    redirectTo: websecure
+    redirectTo:
+      port: websecure
   websecure:
     tls:
       enabled: true
