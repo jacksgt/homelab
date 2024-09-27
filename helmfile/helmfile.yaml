@@ -74,6 +74,8 @@ releases:
   version: 14.1.2
   namespace: mariadb
   createNamespace: true
+  labels:
+    type: platform
   secrets:
     - ./environments/{{ .Environment.Name }}/mariadb-values.secret.yaml
   # https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
@@ -102,10 +104,20 @@ releases:
       # extraDeploy:
       # - kind: DatabaseInstance
 
+- name: kub-vol-bak
+  chart: ./kub-vol-bak
+  namespace: kub-vol-bak
+  createNamespace: true
+  condition: backup.enabled
+  secrets:
+    - ./environments/{{ .Environment.Name }}/kub-vol-bak.secret.yaml
+
 # helm upgrade --install kube-prometheus-stack -n monitoring -f monitoring/kube-prometheus-stack.values.yaml prometheus-community/kube-prometheus-stack
 - name: kube-prometheus-stack
   namespace: monitoring
   createNamespace: true
+  labels:
+    type: platform
   version: 45.25.0
   chart: prometheus-community/kube-prometheus-stack
   # https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
@@ -115,6 +127,8 @@ releases:
 - name: traefik
   namespace: traefik
   createNamespace: true
+  labels:
+    type: platform
   # https://github.com/traefik/traefik-helm-chart/tags
   version: 27.0.2
   chart: traefik/traefik
@@ -124,6 +138,8 @@ releases:
 # helm upgrade --install prometheus-adapter -n monitoring -f monitoring/prometheus-adapter.values.yaml prometheus-community/prometheus-adapter
 - name: prometheus-adapter
   namespace: monitoring
+  labels:
+    type: platform
   version: 4.2.0
   chart: prometheus-community/prometheus-adapter
   # https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
@@ -133,6 +149,8 @@ releases:
 # TODO: use `extraDeploy` on the gitea chart instead of this
 - name: gitea-extras
   namespace: gitea
+  labels:
+    type: app
   chart: incubator/raw
   values:
   - resources:
@@ -163,6 +181,8 @@ releases:
 - name: gitea
   namespace: gitea
   createNamespace: true
+  labels:
+    type: app
   # https://gitea.com/gitea/helm-chart
   # https://gitea.com/gitea/helm-chart#upgrading
   # https://gitea.com/gitea/helm-chart/releases
@@ -314,6 +334,8 @@ releases:
 - name: s3-website-gateway
   namespace: static-websites
   createNamespace: true
+  labels:
+    type: app
   chart: "./local_charts/s3-website-gateway/"
   values:
     - image:
@@ -351,6 +373,8 @@ releases:
 - name: homepage
   namespace: homepage
   createNamespace: true
+  labels:
+    type: app
   chart: "jameswynn/homepage" # unofficial helm chart: https://github.com/jameswynn/helm-charts/tree/main/charts/homepage
   version: 1.2.1
   values:
@@ -523,10 +547,12 @@ releases:
 
 # TODO: also manage backup cronjob with Helmfile
 - name: postgres
-  chart: bitnamicharts-oci/postgresql
-  version: 13.2.9
   namespace: postgres
   createNamespace: true
+  labels:
+    type: platform
+  chart: bitnamicharts-oci/postgresql
+  version: 13.2.9
   secrets:
     - ./environments/{{ .Environment.Name }}/postgres-values.secret.yaml
   # https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
@@ -562,14 +588,16 @@ releases:
       #   ...
 
 - name: authentik
+  namespace: authentik
+  createNamespace: true
+  labels:
+    type: app
   # https://github.com/goauthentik/authentik/releases
   # https://goauthentik.io/docs/releases
   # https://github.com/goauthentik/helm
   # note Authentik releases and Helm chart releases are in-sync
   chart: authentik/authentik
   version: "2023.10.3"
-  namespace: authentik
-  createNamespace: true
   secrets:
     - ./environments/{{ .Environment.Name }}/authentik-values.secret.yaml
   # https://github.com/goauthentik/helm/blob/main/charts/authentik/values.yaml
@@ -661,6 +689,8 @@ releases:
 
 - name: authentik-extras
   namespace: authentik
+  labels:
+    type: app
   chart: incubator/raw
   values:
   - resources:
@@ -683,6 +713,9 @@ releases:
 
 - name: nextcloud
   namespace: nextcloud
+  createNamespace: true
+  labels:
+    type: app
   # https://github.com/nextcloud/helm/tree/main/charts/nextcloud
   chart: nextcloud/nextcloud
   version: 4.5.0
@@ -826,9 +859,9 @@ releases:
 - name: stirling-pdf
   namespace: stirling-pdf
   createNamespace: true
-  chart: frooodle/stirling-pdf-chart
   labels:
-    name: stirling-pdf
+    type: app
+  chart: frooodle/stirling-pdf-chart
   version: 1.0.0
   # https://github.com/stirling-tools/Stirling-PDF/blob/main/chart/stirling-pdf/values.yaml
   # https://www.stirlingtools.com/docs/Advanced%20Configuration/How%20to%20add%20configurations
@@ -906,6 +939,8 @@ releases:
 - name: home-assistant
   namespace: home-assistant
   createNamespace: true
+  labels:
+    type: app
   chart: pajikos/home-assistant
   version: 0.2.24
   # https://github.com/pajikos/home-assistant-helm-chart/blob/main/charts/home-assistant/values.yaml
