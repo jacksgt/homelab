@@ -1,0 +1,148 @@
+# Default values for redlib.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: quay.io/redlib/redlib
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+env:
+  # Instance-specific settings
+  # https://github.com/redlib-org/redlib?tab=readme-ov-file#instance-settings
+
+  # Enable SFW-only mode for the instance
+  SFW_ONLY: off
+  # Set a banner message for the instance
+  BANNER:
+  # Disable search engine indexing
+  ROBOTS_DISABLE_INDEXING: on
+  # Set the Pushshift frontend for "removed" links
+  PUSHSHIFT_FRONTEND: undelete.pullpush.io
+
+  # Default user settings
+  # Set the default theme (options: system, light, dark, black, dracula, nord, laserwave, violet, gold, rosebox, gruvboxdark, gruvboxlight)
+  DEFAULT_THEME: system
+  # Set the default front page (options: default, popular, all)
+  DEFAULT_FRONT_PAGE: default
+  # Set the default layout (options: card, clean, compact)
+  DEFAULT_LAYOUT: card
+  # Enable wide mode by default
+  DEFAULT_WIDE: off
+  # Set the default post sort method (options: hot, new, top, rising, controversial)
+  DEFAULT_POST_SORT: hot
+  # Set the default comment sort method (options: confidence, top, new, controversial, old)
+  DEFAULT_COMMENT_SORT: confidence
+  # Enable blurring Spoiler content by default
+  DEFAULT_BLUR_SPOILER: off
+  # Enable showing NSFW content by default
+  DEFAULT_SHOW_NSFW: off
+  # Enable blurring NSFW content by default
+  DEFAULT_BLUR_NSFW: off
+  # Enable HLS video format by default
+  DEFAULT_USE_HLS: off
+  # Hide HLS notification by default
+  DEFAULT_HIDE_HLS_NOTIFICATION: off
+  # Disable autoplay videos by default
+  DEFAULT_AUTOPLAY_VIDEOS: off
+  # Define a default list of subreddit subscriptions (format: sub1+sub2+sub3)
+  DEFAULT_SUBSCRIPTIONS:
+  # Define a default list of subreddit filters (format: sub1+sub2+sub3)
+  DEFAULT_FILTERS:
+  # Hide awards by default
+  DEFAULT_HIDE_AWARDS: off
+  # Hide sidebar and summary
+  DEFAULT_HIDE_SIDEBAR_AND_SUMMARY: off
+  # Disable the confirmation before visiting Reddit
+  DEFAULT_DISABLE_VISIT_REDDIT_CONFIRMATION: off
+  # Hide score by default
+  DEFAULT_HIDE_SCORE: off
+  # Enable fixed navbar by default
+  DEFAULT_FIXED_NAVBAR: on
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65534
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+readinessProbe:
+  httpGet:
+    path: /settings
+    port: http
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
