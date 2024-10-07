@@ -1,0 +1,881 @@
+---
+# Hostname used for various applications
+hostname: ""
+
+global:
+  # -- Set an override for the prefix of the fullname
+  nameOverride:
+  # -- Set the entire name definition
+  fullnameOverride:
+  # -- Set additional global labels. Helm templates can be used.
+  labels:
+    app.kubernetes.io/name: arr-stack
+
+  # -- Set additional global annotations. Helm templates can be used.
+  annotations: {}
+
+# -- Set default options for all controllers / pods here
+# Each of these options can be overridden on a Controller level
+defaultPodOptions:
+  # -- Set annotations on the Pod. Pod-specific values will be merged with this.
+  annotations: {}
+
+  # -- Specifies whether a service account token should be automatically mounted.
+  automountServiceAccountToken: false
+
+  # -- Enable/disable the generation of environment variables for services.
+  # [[ref]](https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/#accessing-the-service)
+  enableServiceLinks: false
+
+  # -- Set labels on the Pod. Pod-specific values will be merged with this.
+  labels: {}
+
+  # -- Configure the Security Context for the Pod
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+
+controllers:
+
+  ############################################################################################
+  filebrowser:
+    # -- enable the controller.
+    enabled: true
+
+    # -- Set the controller type.
+    # Valid options are deployment, daemonset, statefulset, cronjob or job
+    type: deployment
+    # -- Set annotations on the deployment/statefulset/daemonset/cronjob/job
+    annotations: {}
+    # -- Set labels on the deployment/statefulset/daemonset/cronjob/job
+    labels:
+      app.kubernetes.io/component: filebrowser
+
+    # -- Number of desired pods. When using a HorizontalPodAutoscaler, set this to `null`.
+    replicas: 1
+    # -- Set the controller upgrade strategy
+    # For Deployments, valid values are Recreate (default) and RollingUpdate.
+    # For StatefulSets, valid values are OnDelete and RollingUpdate (default).
+    # DaemonSets/CronJobs/Jobs ignore this.
+    strategy: Recreate
+    # -- ReplicaSet revision history limit
+    revisionHistoryLimit: 3
+
+    containers:
+      filebrowser:
+        image:
+          repository: docker.io/filebrowser/filebrowser
+          tag: v2.30.0
+          pullPolicy: IfNotPresent
+
+        command:
+          - /filebrowser
+          - -d
+          - /tmp/database.db
+
+        env:
+          - name: FB_NOAUTH
+            value: "true"
+          - name: FB_BASEURL
+            value: /files
+
+        probes:
+          liveness:
+            enabled: false
+
+          # -- Readiness probe configuration
+          readiness:
+            # -- Enable the readiness probe
+            enabled: true
+            # -- Set this to `true` if you wish to specify your own readinessProbe
+            custom: true
+            # -- sets the probe type when not using a custom probe
+            # @default -- "TCP"
+            type: HTTP
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 80
+
+        # -- Set the resource requests / limits for the container.
+        resources:
+          requests:
+            cpu: 10m
+            memory: 50Mi
+          limits:
+            cpu: 100m
+            memory: 200Mi
+
+        # -- Configure the Security Context for the container
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: []
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+  ############################################################################################
+  # https://prowlarr.com/
+  # https://github.com/Prowlarr/Prowlarr
+  prowlarr:
+    enabled: true
+
+    # -- Set the controller type.
+    # Valid options are deployment, daemonset, statefulset, cronjob or job
+    type: deployment
+    # -- Set annotations on the deployment/statefulset/daemonset/cronjob/job
+    annotations: {}
+    # -- Set labels on the deployment/statefulset/daemonset/cronjob/job
+    labels:
+      app.kubernetes.io/component: prowlarr
+
+    replicas: 1
+    strategy: Recreate
+
+    containers:
+      prowlarr:
+        image:
+          repository: ghcr.io/hotio/prowlarr
+          tag: release-1.24.3.4754
+          pullPolicy: IfNotPresent
+
+        command:
+          - sh
+          - -c
+          - |
+            if [ ! -e /config/config.xml ]; then
+              echo "Applying default Prowlarr configuration"
+              cat - > /config/config.xml <<EOF
+            <Config>
+              <BindAddress>*</BindAddress>
+              <Port>9696</Port>
+              <EnableSsl>False</EnableSsl>
+              <LaunchBrowser>False</LaunchBrowser>
+              <AuthenticationMethod>External</AuthenticationMethod>
+              <AuthenticationRequired>Enabled</AuthenticationRequired>
+              <Branch>master</Branch>
+              <LogLevel>info</LogLevel>
+              <UrlBase>/prowlarr</UrlBase>
+              <InstanceName>Prowlarr</InstanceName>
+              <UpdateMechanism>Docker</UpdateMechanism>
+              <AnalyticsEnabled>False</AnalyticsEnabled>
+            </Config>
+            EOF
+            fi
+
+            exec /app/bin/Prowlarr --nobrowser --data=/config
+
+        probes:
+          liveness:
+            enabled: false
+
+          # -- Readiness probe configuration
+          readiness:
+            # -- Enable the readiness probe
+            enabled: true
+            # -- Set this to `true` if you wish to specify your own readinessProbe
+            custom: true
+            # -- sets the probe type when not using a custom probe
+            # @default -- "TCP"
+            type: HTTP
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 9696
+                path: /prowlarr
+
+        # -- Set the resource requests / limits for the container.
+        # TODO
+        resources: {}
+
+        # -- Configure the Security Context for the container
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: []
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+  ############################################################################################
+  radarr:
+    # -- enable the controller.
+    enabled: true
+
+    # -- Set the controller type.
+    # Valid options are deployment, daemonset, statefulset, cronjob or job
+    type: deployment
+    # -- Set annotations on the deployment/statefulset/daemonset/cronjob/job
+    annotations: {}
+    # -- Set labels on the deployment/statefulset/daemonset/cronjob/job
+    labels:
+      app.kubernetes.io/component: radarr
+
+    # -- Number of desired pods. When using a HorizontalPodAutoscaler, set this to `null`.
+    replicas: 1
+    strategy: Recreate
+
+    containers:
+      radarr:
+        image:
+          repository: ghcr.io/hotio/radarr
+          tag: release-5.11.0.9244
+          pullPolicy: IfNotPresent
+
+        command:
+          - sh
+          - -c
+          - |
+            if [ ! -e /config/config.xml ]; then
+              echo "Applying default Radarr configuration"
+              cat - > /config/config.xml <<EOF
+            <Config>
+              <BindAddress>*</BindAddress>
+              <Port>7878</Port>
+              <EnableSsl>False</EnableSsl>
+              <LaunchBrowser>False</LaunchBrowser>
+              <AuthenticationMethod>External</AuthenticationMethod>
+              <AuthenticationRequired>Enabled</AuthenticationRequired>
+              <Branch>master</Branch>
+              <LogLevel>info</LogLevel>
+              <UrlBase>/radarr</UrlBase>
+              <InstanceName>Radarr</InstanceName>
+              <UpdateMechanism>Docker</UpdateMechanism>
+              <AnalyticsEnabled>False</AnalyticsEnabled>
+            </Config>
+            EOF
+            fi
+
+            exec /app/bin/Radarr --nobrowser --data=/config
+
+        probes:
+          liveness:
+            enabled: false
+
+          # -- Readiness probe configuration
+          readiness:
+            # -- Enable the readiness probe
+            enabled: true
+            # -- Set this to `true` if you wish to specify your own readinessProbe
+            custom: true
+            # -- sets the probe type when not using a custom probe
+            # @default -- "TCP"
+            type: HTTP
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 7878
+                path: /radarr
+
+        # -- Set the resource requests / limits for the container.
+        # TODO
+        resources: {}
+
+        # -- Configure the Security Context for the container
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: []
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+  ############################################################################################
+  qbittorrent:
+    # -- enable the controller.
+    enabled: true
+
+    # -- Set the controller type.
+    # Valid options are deployment, daemonset, statefulset, cronjob or job
+    type: deployment
+    # -- Set annotations on the deployment/statefulset/daemonset/cronjob/job
+    annotations: {}
+    # -- Set labels on the deployment/statefulset/daemonset/cronjob/job
+    labels:
+      app.kubernetes.io/component: qbittorrent
+
+    # -- Number of desired pods. When using a HorizontalPodAutoscaler, set this to `null`.
+    replicas: 1
+    # -- Set the controller upgrade strategy
+    # For Deployments, valid values are Recreate (default) and RollingUpdate.
+    # For StatefulSets, valid values are OnDelete and RollingUpdate (default).
+    # DaemonSets/CronJobs/Jobs ignore this.
+    strategy: Recreate
+
+    containers:
+      qbittorrent:
+        image:
+          repository: ghcr.io/hotio/qbittorrent
+          tag: release-5.0.0
+          pullPolicy: IfNotPresent
+
+        command:
+          - sh
+          - -c
+          - |
+            if [ ! -e /config/qBittorrent/qBittorrent.conf ]; then
+              echo "Applying default qBittorrent configuration"
+              mkdir -p /config/qBittorrent
+              cat - > /config/qBittorrent/qBittorrent.conf <<EOF
+            [Preferences]
+            WebUI\AuthSubnetWhitelist=10.42.0.0/16
+            WebUI\AuthSubnetWhitelistEnabled=true
+            WebUI\UseUPnP=false
+            WebUI\HostHeaderValidation=false
+            WebUI\LocalHostAuth=false
+            WebUI\Address=*
+            WebUI\Port=8080
+            Downloads\SavePath=/data/Downloads/
+            Downloads\TempPath=/data/Downloads/incomplete/
+
+            [LegalNotice]
+            Accepted=true
+            EOF
+            fi
+            exec /app/qbittorrent-nox
+
+        env:
+          - name: XDG_CONFIG_HOME
+            value: /config
+          - name: XDG_CACHE_HOME
+            value: /tmp/cache
+          - name: XDG_DATA_HOME
+            value: /tmp/local/share
+
+        probes:
+          liveness:
+            enabled: false
+
+          readiness:
+            enabled: true
+            custom: true
+            type: HTTP
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 8080
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 500m
+            memory: 500Mi
+
+        # -- Configure the Security Context for the container
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: []
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+  ############################################################################################
+  # MeTube: Web GUI for downloading videos from YouTube with yt-dlp
+  # https://github.com/alexta69/metube
+  metube:
+    # -- enable the controller.
+    enabled: true
+    type: deployment
+    # -- Set annotations on the deployment/statefulset/daemonset/cronjob/job
+    annotations: {}
+    # -- Set labels on the deployment/statefulset/daemonset/cronjob/job
+    labels:
+      app.kubernetes.io/component: metube
+
+    replicas: 1
+    strategy: Recreate
+
+    containers:
+      metube:
+        image:
+          repository: ghcr.io/alexta69/metube
+          tag: 2024-04-12
+          pullPolicy: IfNotPresent
+
+        env:
+          - name: TEMP_DIR
+            value: /tmp
+          - name: OUTPUT_TEMPLATE
+            value: '%(title)s - %(uploader)s [%(id)s].%(ext)s'
+          - name: URL_PREFIX
+            value: /youtube
+          - name: YTDL_OPTIONS
+            value: |
+              {
+                "writeinfojson":true,
+                "writethumbnail":true
+              }
+
+        probes:
+          liveness:
+            enabled: false
+
+          # -- Readiness probe configuration
+          readiness:
+            # -- Enable the readiness probe
+            enabled: true
+            # -- Set this to `true` if you wish to specify your own readinessProbe
+            custom: true
+            # -- sets the probe type when not using a custom probe
+            # @default -- "TCP"
+            type: HTTP
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 8081
+                path: /youtube
+
+        # -- Set the resource requests / limits for the container.
+        # TODO
+        resources: {}
+
+        # -- Configure the Security Context for the container
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: []
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- Labels to add to the service account
+  labels: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+
+# -- Configure the services for the chart here.
+# Additional services can be added by adding a dictionary key similar to the 'main' service.
+# @default -- See below
+service:
+  filebrowser:
+    enabled: true
+    controller: filebrowser
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: filebrowser
+    ports:
+      http:
+        enabled: true
+        port: 80
+        protocol: HTTP
+        targetPort: 80
+
+  prowlarr:
+    enabled: true
+    controller: prowlarr
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: prowlarr
+    ports:
+      http:
+        enabled: true
+        port: 9696
+        protocol: HTTP
+        targetPort: 9696
+
+  radarr:
+    enabled: true
+    controller: radarr
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: radarr
+    ports:
+      http:
+        enabled: true
+        port: 7878
+        protocol: HTTP
+        targetPort: 7878
+
+  qbittorrent:
+    enabled: true
+    primary: false
+    controller: qbittorrent
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: qbittorrent
+    ports:
+      http:
+        enabled: true
+        port: 8080
+        protocol: HTTP
+        targetPort: 8080
+
+  metube:
+    enabled: true
+    controller: metube
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: metube
+    ports:
+      http:
+        enabled: true
+        port: 8081
+        protocol: HTTP
+        targetPort: 8081
+
+# -- Configure the ingresses for the chart here.
+
+ingress:
+  main:
+    enabled: true
+    annotations:
+      traefik.ingress.kubernetes.io/router.middlewares: "{{ .Release.Namespace }}-{{ .Release.Name }}-authentik-auth-proxy@kubernetescrd,{{ .Release.Namespace }}-{{ .Release.Name }}-strip-prefixes@kubernetescrd"
+
+    # -- Provide additional labels which may be required. Helm templates can be used.
+    labels: {}
+
+    ## Configure the hosts for the ingress
+    hosts:
+      - host: "{{ .Values.hostname }}"
+        paths:
+          - path: /files
+            pathType: Prefix
+            service:
+              # -- Reference a service identifier from this values.yaml
+              identifier: filebrowser
+              # -- Overrides the service port number reference for this path
+              port: http
+          - path: /qbittorrent
+            pathType: Prefix
+            service:
+              # -- Reference a service identifier from this values.yaml
+              identifier: qbittorrent
+              # -- Overrides the service port number reference for this path
+              port: http
+          - path: /radarr
+            pathType: Prefix
+            service:
+              # -- Reference a service identifier from this values.yaml
+              identifier: radarr
+              # -- Overrides the service port number reference for this path
+              port: http
+          - path: /prowlarr
+            pathType: Prefix
+            service:
+              # -- Reference a service identifier from this values.yaml
+              identifier: prowlarr
+              # -- Overrides the service port number reference for this path
+              port: http
+          - path: /youtube
+            pathType: Prefix
+            service:
+              # -- Reference a service identifier from this values.yaml
+              identifier: metube
+              # -- Overrides the service port number reference for this path
+              port: http
+
+
+    # -- Configure TLS for the ingress. Both secretName and hosts can process a Helm template.
+    tls:
+     - secretName: "{{ .Release.Name }}-ingress-secret"
+       hosts:
+         - "{{ .Values.hostname }}"
+
+# -- Configure the ServiceMonitors for the chart here.
+# Additional ServiceMonitors can be added by adding a dictionary key similar to the 'main' ServiceMonitors.
+# @default -- See below
+serviceMonitor:
+  {}
+  # main:
+  #   # -- Enables or disables the serviceMonitor.
+  #   enabled: false
+
+  #   # -- Override the name suffix that is used for this serviceMonitor.
+  #   nameOverride: ""
+
+  #   # -- Provide additional annotations which may be required.
+  #   annotations: {}
+
+  #   # -- Provide additional labels which may be required.
+  #   labels: {}
+
+  #   # -- Configures a custom selector for the serviceMonitor, this takes precedence over
+  #   # specifying a service name.
+  #   # Helm templates can be used.
+  #   selector: {}
+
+  #   # -- Configures the target Service for the serviceMonitor. Helm templates can be used.
+  #   serviceName: '{{ include "bjw-s.common.lib.chart.names.fullname" $ }}'
+
+  #   # -- Configures the endpoints for the serviceMonitor.
+  #   # @default -- See values.yaml
+  #   endpoints:
+  #     - port: http
+  #       scheme: http
+  #       path: /metrics
+  #       interval: 1m
+  #       scrapeTimeout: 10s
+
+  #   # -- Configures custom targetLabels for the serviceMonitor. (All collected
+  #   # meterics will have these labels, taking the value from the target service)
+  #   # [[ref]](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#servicemonitorspec/)
+  #   targetLabels: []
+
+# -- Configure the gateway routes for the chart here.
+# Additional routes can be added by adding a dictionary key similar to the 'main' route.
+# [[ref]](https://gateway-api.sigs.k8s.io/references/spec/)
+# @default -- See below
+route:
+  {}
+  # main:
+  #   # -- Enables or disables the route
+  #   enabled: false
+
+  #   # -- Set the route kind
+  #   # Valid options are GRPCRoute, HTTPRoute, TCPRoute, TLSRoute, UDPRoute
+  #   kind: HTTPRoute
+
+  #   # -- Override the name suffix that is used for this route.
+  #   nameOverride: ""
+
+  #   # -- Provide additional annotations which may be required.
+  #   annotations: {}
+
+  #   # -- Provide additional labels which may be required.
+  #   labels: {}
+
+  #   # -- Configure the resource the route attaches to.
+  #   parentRefs:
+  #     - # Group of the referent resource.
+  #       group: gateway.networking.k8s.io
+  #       # Kind of the referent resource.
+  #       kind: Gateway
+  #       # Name of the referent resource
+  #       name:
+  #       # Namespace of the referent resource
+  #       namespace:
+  #       # Name of the section within the target resource.
+  #       sectionName:
+
+  #   # -- Host addresses. Helm template can be passed.
+  #   hostnames: []
+
+  #   # -- Configure rules for routing. Defaults to the primary service.
+  #   rules:
+  #     - # -- Configure backends where matching requests should be sent.
+  #       backendRefs: []
+  #       ## Configure conditions used for matching incoming requests. Only for HTTPRoutes
+  #       matches:
+  #         - path:
+  #             type: PathPrefix
+  #             value: /
+  #       ## Request filters that are applied to the rules.
+  #       filters: []
+  #       ## Request timeout that are applied to the rules.
+  #       timeouts: {}
+
+# -- Configure persistence for the chart here.
+# Additional items can be added by adding a dictionary key similar to the 'config' key.
+# [[ref]](https://bjw-s.github.io/helm-charts/docs/common-library/common-library-storage)
+# @default -- See below
+persistence:
+  tmp:
+    enabled: true
+    type: emptyDir
+    # mount an emptyDir to all containers in all controllers
+    globalMounts:
+      - path: /tmp
+        readOnly: false
+
+  data:
+    enabled: true
+    type: persistentVolumeClaim
+    existingClaim: jellyfin-data
+    advancedMounts:
+      filebrowser: # the controller
+        filebrowser: # the container
+          - path: /srv
+            subPath: storage
+            readOnly: false
+      qbittorrent:
+        qbittorrent:
+          - path: /data/Downloads
+            subPath: storage/Downloads
+            readOnly: false
+      prowlarr:
+        prowlarr:
+          - path: /data
+            subPath: storage
+            readOnly: false
+      radarr:
+        radarr:
+          - path: /data
+            subPath: storage
+            readOnly: false
+      metube:
+        metube:
+          - path: /downloads
+            subPath: storage/YouTube
+            readOnly: false
+
+  qbittorrent-config:
+    enabled: true
+    type: persistentVolumeClaim
+    # storageClass: null # use the default
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    retain: true
+    advancedMounts:
+      qbittorrent:
+        qbittorrent:
+          - path: /config
+
+  prowlarr-config:
+    enabled: true
+    type: persistentVolumeClaim
+    # storageClass: null # use the default
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    retain: true
+    advancedMounts:
+      prowlarr:
+        prowlarr:
+          - path: /config
+
+  radarr-config:
+    enabled: true
+    type: persistentVolumeClaim
+    # storageClass: null # use the default
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    retain: true
+    advancedMounts:
+      radarr:
+        radarr:
+          - path: /config
+
+# -- Configure the networkPolicies for the chart here.
+# Additional networkPolicies can be added by adding a dictionary key similar to the 'main' networkPolicy.
+# @default -- See below
+networkpolicies:
+  {}
+  # main:
+  #   # -- Enables or disables the networkPolicy item. Defaults to true
+  #   enabled: false
+
+  #   # -- Configure which controller this networkPolicy should target
+  #   controller: main
+
+  #   # -- Define a custom podSelector for the networkPolicy. This takes precedence over targeting a controller.
+  #   # podSelector: {}
+
+  #   # -- The policyTypes for this networkPolicy
+  #   policyTypes:
+  #     - Ingress
+  #     - Egress
+
+  #   # -- The rulesets for this networkPolicy
+  #   # [[ref]](https://kubernetes.io/docs/concepts/services-networking/network-policies/#networkpolicy-resource)
+  #   rules:
+  #     # -- The ingress rules for this networkPolicy. Allows all ingress traffic by default.
+  #     ingress:
+  #       - {}
+  #     # -- The egress rules for this networkPolicy. Allows all egress traffic by default.
+  #     egress:
+  #       - {}
+
+# -- Configure any unsupported raw resources here.
+# @default -- See below
+rawResources:
+  # https://blog.cubieserver.de/2023/auth-proxy-with-authentik-and-traefik/
+  authentik-auth-proxy-middleware:
+    apiVersion: traefik.containo.us/v1alpha1
+    kind: Middleware
+    nameOverride: authentik-auth-proxy
+    spec:
+      spec:
+        forwardAuth:
+          address: http://ak-outpost-authentik-embedded-outpost.authentik.svc.cluster.local:9000/outpost.goauthentik.io/auth/traefik
+          authResponseHeaders:
+          - X-authentik-username
+          - X-authentik-groups
+          - X-authentik-email
+          - X-authentik-name
+          - X-authentik-uid
+          - X-authentik-jwt
+          - X-authentik-meta-jwks
+          - X-authentik-meta-outpost
+          - X-authentik-meta-provider
+          - X-authentik-meta-app
+          - X-authentik-meta-version
+          trustForwardHeader: true
+
+  # This middleware is required for application that don't support configuring a base URL
+  strip-prefixes-middleware:
+    apiVersion: traefik.containo.us/v1alpha1
+    kind: Middleware
+    nameOverride: strip-prefixes
+    spec:
+      spec:
+        stripPrefix:
+          prefixes:
+          - /qbittorrent
+          - /files
+
+# -- Configure the Roles and Role Bindings for the chart here.
+rbac:
+  {}
+  # roles:
+  #   role1:
+  #     # -- Force replace the name of the object.
+  #     forceRename: <force name>
+  #     # -- Enables or disables the Role. Can be templated.
+  #     enabled: true
+  #     # -- Set to Role,ClusterRole
+  #     type: Role
+  #     rules:
+  #       - apiGroups: ["*"]
+  #         resources: ["*"]
+  #         verbs: ["get", "list", "watch"]
+  # bindings:
+  #   binding1:
+  #     # -- Force replace the name of the object.
+  #     forceRename: <force name>
+  #     # -- Enables or disables the Role. Can be templated.
+  #     enabled: true
+  #     # -- Set to RoleBinding,ClusterRoleBinding
+  #     type: RoleBinding
+  #     # -- Can be an identifier of rbac.roles or a custom name and kind
+  #     roleRef:
+  #       name: test-role
+  #       kind: Role
+  #       identifier: test
+  #     # -- If using an identifier it will be automatically filled, otherwise every key will need to be explicitly declared
+  #     subjects:
+  #       - identifier: default
+  #       - kind: ServiceAccount
+  #         name: test
+  #         namespace: "{{ .Release.Namespace }}"

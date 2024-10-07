@@ -24,7 +24,8 @@ repositories:
    url: https://pajikos.github.io/home-assistant-helm-chart/
  - name: traefik
    url: https://helm.traefik.io/traefik
-
+ - name: bjw-s
+   url: https://bjw-s.github.io/helm-charts
 
   # - name: myOCIRegistry
   #   url: myregistry.azurecr.io
@@ -61,6 +62,8 @@ environments:
 
 helmDefaults:
   historyMax: 3
+
+kubeVersion: v1.30
 
 releases:
 - name: storage
@@ -134,6 +137,8 @@ releases:
   chart: traefik/traefik
   values:
   - traefik/traefik.values.yaml
+  # Traefik UI can be accessed at <http://localhost:9000/dashboard/> after running:
+  # kubectl -n traefik port-forward $(kubectl -n traefik get pods --selector "app.kubernetes.io/name=traefik" --output=name) 9000:9000
 
 # helm upgrade --install prometheus-adapter -n monitoring -f monitoring/prometheus-adapter.values.yaml prometheus-community/prometheus-adapter
 - name: prometheus-adapter
@@ -354,11 +359,11 @@ releases:
       websites:
       - name: www-old
         bucket: www-cubieserver-de
-        endpoint: https://s3.cubieserver.de
+        endpoint: http://minio.minio.svc.cluster.local.:9000
         hostname: www-old.cubieserver.de
       - name: jacks-blog
         bucket: blog-cubieserver-de
-        endpoint: https://s3.cubieserver.de
+        endpoint: http://minio.minio.svc.cluster.local.:9000
         hostname: blog.cubieserver.de
       - name: jacks-blog-test
         bucket: blog-cubieserver-de-test
@@ -366,7 +371,7 @@ releases:
         hostname: test-blog.cubieserver.de
       - name: adeles-blog
         bucket: adele
-        endpoint: https://s3.cubieserver.de
+        endpoint: http://minio.minio.svc.cluster.local.:9000
         hostname: adeles.cooking
 
   # Deploys an instance of https://github.com/gethomepage/homepage (https://github.com/gethomepage/homepage)
@@ -698,6 +703,7 @@ releases:
 
       prometheus:
         serviceMonitor:
+          create: true
 
 - name: authentik-extras
   namespace: authentik
@@ -1011,3 +1017,17 @@ releases:
           - secretName: redlib-ingress-secret
             hosts:
               - reddit.cubieserver.de
+
+- name: arr
+  namespace: jellyfin
+  labels:
+    type: app
+  chart: bjw-s/app-template
+  values:
+    - jellyfin/arr.values.yaml
+    - hostname: media.cubieserver.de
+      ingress:
+        main:
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-production
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
