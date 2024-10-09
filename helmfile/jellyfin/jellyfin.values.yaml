@@ -1,0 +1,61 @@
+# Configuration values for the Jellyfin Helm chart
+# https://github.com/jellyfin/jellyfin-helm/blob/master/charts/jellyfin/values.yaml
+
+image:
+  repository: docker.io/jellyfin/jellyfin
+  tag: "10.9.7"
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 500Mi
+  limits:
+    cpu: 2
+    memory: 1.5Gi
+
+extraVolumes:
+  - name: hwa
+    hostPath:
+      path: /dev/dri
+  - name: tmp
+    emptyDir: {}
+
+extraVolumeMounts:
+  - name: hwa
+    mountPath: /dev/dri
+  - name: tmp
+    mountPath: /tmp
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+
+securityContext:
+  privileged: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    add:
+      - "SYS_ADMIN"
+    drop:
+      - "ALL"
+
+livenessProve:
+  enabled: false
+
+readinessProbe:
+  enabled: true
+  periodSeconds: 15
+
+persistence:
+  config:
+    enabled: true
+    size: 1Gi
+    storageClass: "local-path-btrfs"
+  media:
+    enabled: true
+    annotations:
+      # No need to back up this data
+      backup-enabled: "false"
+    size: 500Gi
+    storageClass: "local-path-btrfs"
