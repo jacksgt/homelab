@@ -264,8 +264,9 @@ releases:
                          kubernetes.io/ingress.class: "" # default ingress controller
                          traefik.ingress.kubernetes.io/router.priority: "100"
 
-
-# TODO: use `extraDeploy` on the gitea chart instead of this
+# Note: we cannot use the `extraDeploy` value of the Gitea Helm chart for this resource,
+# because the Gitea Helm chart runs a Helm template over the value, which means we loose the
+# curly brackets (that should remain as is so they are passed to the DB operator).
 - name: gitea-extras
   namespace: gitea
   labels:
@@ -286,16 +287,6 @@ releases:
           name: '{{`{{ .DatabaseName }}'`}}
           password: {{`'{{ .Password }}'`}}
           user: {{`'{{ .UserName }}'`}}
-    - apiVersion: v1
-      kind: ConfigMap
-      metadata:
-        name: custom-gitea-config
-      data:
-        # Disallow bots from crawling (causes lots of traffic)
-        # https://docs.gitea.com/administration/search-engines-indexation
-        robots.txt: |
-          User-agent: *
-          Disallow: /
 
 - name: gitea
   namespace: gitea
@@ -306,14 +297,14 @@ releases:
   # https://gitea.com/gitea/helm-chart#upgrading
   # https://gitea.com/gitea/helm-chart/releases
   chart: "gitea/gitea"
-  version: "9.5.1"
+  version: "10.5.0"
   secrets:
     - ./environments/{{ .Environment.Name }}/gitea-values.secret.yaml
   # https://gitea.com/gitea/helm-chart/src/branch/main/values.yaml
   values:
   - image:
       # https://github.com/go-gitea/gitea/tags
-      tag: "1.21.5"
+      tag: "1.22.3"
       pullPolicy: IfNotPresent
       rootless: true
     gitea:
@@ -329,14 +320,14 @@ releases:
         APP_NAME: 'Gitea: Git@Cubieserver'
         server:
           SSH_PORT: 2222
-          DOMAIN: "" # set via overlay
+          DOMAIN: "" # set in secret values
           OFFLINE_MODE: true
           LANDING_PAGE: "explore"
         actions:
           ENABLED: true # as of v1.20, Gitea Actions are disabled by default
         service:
-          # registrations needs to be enabled so new users can join via OIDC
-          DISABLE_REGISTRATION: false
+          # only OAuth2/OIDC login is allowed
+          DISABLE_REGISTRATION: true
           # users should register themselves with the IDP, not in Gitea
           SHOW_REGISTRATION_BUTTON: false
         # https://docs.gitea.com/next/administration/logging-config
@@ -349,7 +340,7 @@ releases:
         session:
           PROVIDER: db
         cache:
-          ADAPTER: memory
+          ADAPTER: twoqueue
         queue:
           TYPE: level
         indexer:
@@ -391,7 +382,7 @@ releases:
           name: custom-gitea-config
     extraContainerVolumeMounts:
       - name: custom-gitea-config
-        mountPath: /data/gitea/robots.txt
+        mountPath: /data/gitea/public/robots.txt
         subPath: robots.txt
         readOnly: true
 
@@ -449,6 +440,19 @@ releases:
       enabled: false
     test:
       enabled: false
+
+    # additional resources
+    extraDeploy:
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: custom-gitea-config
+      data:
+        # Disallow bots from crawling (causes lots of traffic)
+        # https://docs.gitea.com/administration/search-engines-indexation
+        robots.txt: |
+          User-agent: *
+          Disallow: /
 
 - name: s3-website-gateway
   namespace: static-websites
