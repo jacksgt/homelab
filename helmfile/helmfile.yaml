@@ -26,6 +26,8 @@ repositories:
    url: https://helm.traefik.io/traefik
  - name: bjw-s
    url: https://bjw-s.github.io/helm-charts
+ - name: jetstack
+   url: https://charts.jetstack.io
 
   # - name: myOCIRegistry
   #   url: myregistry.azurecr.io
@@ -150,6 +152,118 @@ releases:
   # https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
   values:
   - monitoring/prometheus-adapter.values.yaml
+
+- name: cert-manager
+  namespace: cert-manager
+  createNamespace: true
+  labels:
+    type: platform
+  chart: jetstack/cert-manager
+  version: v1.16.1
+  values:
+    - crds:
+        enabled: true
+        keep: true
+      ### Options for cert-manager controller
+      config:
+        numberOfConcurrentWorkers: 1
+        enableGatewayAPI: false # could be useful in the future, but requires Gateway API CRDs to be present
+      extraArgs:
+        # disable leader election because we only run a single replicas and it consumes resources
+        - --leader-elect=false
+      prometheus:
+        enabled: false
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+      resources:
+        limits:
+          memory: 100Mi
+        requests:
+          memory: 40Mi
+      strategy:
+        type: Recreate
+
+      ### Disable optional startupapicheck Job
+      startupapicheck:
+        enabled: false
+
+      ### Configure cainjector component
+      cainjector:
+        strategy:
+          type: Recreate
+        extraArgs:
+          # disable leader election because we only run a single replicas and it consumes resources
+          - --leader-elect=false
+        resources:
+          limits:
+            memory: 100Mi
+          requests:
+            memory: 40Mi
+
+      ### Configure webhook component
+      webhook:
+        resources:
+          limits:
+            memory: 100Mi
+          requests:
+            memory: 20Mi
+
+      ### Configure cluster-scoped issuers that can be used by any application
+      # https://cert-manager.io/docs/configuration/acme/
+      extraObjects:
+      - |
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: selfsigned
+          spec:
+            selfSigned: {}
+      - |
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: letsencrypt-staging
+          spec:
+            acme:
+              email: admin@cubieserver.de
+              preferredChain: ""
+              privateKeySecretRef:
+                name: letsencrypt-staging-account-key
+              server: https://acme-staging-v02.api.letsencrypt.org/directory
+              solvers:
+              - http01:
+                  ingress:
+                    ingressTemplate:
+                      metadata:
+                        annotations:
+                          kubernetes.io/ingress.class: "" # default ingress controller
+                          traefik.ingress.kubernetes.io/router.priority: "100"
+
+      - |
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: letsencrypt-production
+          spec:
+            acme:
+              email: admin@cubieserver.de
+              server: https://acme-v02.api.letsencrypt.org/directory
+              privateKeySecretRef:
+                name: letsencrypt-production-account-key
+              solvers:
+              - http01:
+                 ingress:
+                   ingressTemplate:
+                     metadata:
+                       annotations:
+                         kubernetes.io/ingress.class: "" # default ingress controller
+                         traefik.ingress.kubernetes.io/router.priority: "100"
+
 
 # TODO: use `extraDeploy` on the gitea chart instead of this
 - name: gitea-extras
