@@ -812,7 +812,7 @@ networkpolicies:
 rawResources:
   # https://blog.cubieserver.de/2023/auth-proxy-with-authentik-and-traefik/
   authentik-auth-proxy-middleware:
-    apiVersion: traefik.containo.us/v1alpha1
+    apiVersion: traefik.io/v1alpha1
     kind: Middleware
     nameOverride: authentik-auth-proxy
     spec:
@@ -835,7 +835,7 @@ rawResources:
 
   # This middleware is required for application that don't support configuring a base URL
   strip-prefixes-middleware:
-    apiVersion: traefik.containo.us/v1alpha1
+    apiVersion: traefik.io/v1alpha1
     kind: Middleware
     nameOverride: strip-prefixes
     spec:

@@ -9,10 +9,18 @@ deployment:
   replicas: 1
 image:
   # https://github.com/traefik/traefik/blob/master/CHANGELOG.md
-  tag: v2.11.2
+  tag: v3.2.0
 ingressRoute:
   dashboard:
     enabled: true
+# Traefik backend sources
+providers:
+  kubernetesCRD: # Traefik's CRDs
+    enabled: true
+  kubernetesIngress: # Ingress resources
+    enabled: true
+  kubernetesGateway: # Gateway API
+    enabled: false
 metrics:
   prometheus:
     service:
@@ -21,6 +29,7 @@ metrics:
     addRoutersLabels: true
     addServicesLabels: true
     serviceMonitor:
+      enabled: true
       interval: 30s
       metricRelabelings: []
       relabelings:
