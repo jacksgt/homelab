@@ -713,32 +713,29 @@ persistence:
   data:
     enabled: true
     type: persistentVolumeClaim
-    existingClaim: jellyfin-data
+    existingClaim: jellyfin-media
     advancedMounts:
       filebrowser: # the controller
         filebrowser: # the container
           - path: /srv
-            subPath: storage
             readOnly: false
       qbittorrent:
         qbittorrent:
           - path: /data/Downloads
-            subPath: storage/Downloads
+            subPath: Downloads
             readOnly: false
       prowlarr:
         prowlarr:
           - path: /data
-            subPath: storage
             readOnly: false
       radarr:
         radarr:
           - path: /data
-            subPath: storage
             readOnly: false
       metube:
         metube:
           - path: /downloads
-            subPath: storage/YouTube
+            subPath: YouTube
             readOnly: false
 
   qbittorrent-config:
