@@ -860,8 +860,8 @@ releases:
   values:
   - image:
       # https://github.com/nextcloud/server/tags
-      # https://hub.docker.com/_/nextcloud/?tab=tags
-      tag: "28.0.3-apache"
+      # https://hub.docker.com/_/nextcloud/tags
+      tag: "29.0.8-apache"
 
     ingress:
       enabled: true
