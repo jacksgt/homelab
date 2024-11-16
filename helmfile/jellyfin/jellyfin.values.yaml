@@ -2,8 +2,10 @@
 # https://github.com/jellyfin/jellyfin-helm/blob/master/charts/jellyfin/values.yaml
 
 image:
+  # https://github.com/jellyfin/jellyfin/releases
+  # https://hub.docker.com/r/jellyfin/jellyfin/tags
   repository: docker.io/jellyfin/jellyfin
-  tag: "10.9.7"
+  tag: "10.10.1"
 
 resources:
   requests:

@@ -194,8 +194,13 @@ controllers:
                 path: /prowlarr
 
         # -- Set the resource requests / limits for the container.
-        # TODO
-        resources: {}
+        resources:
+          requests:
+            cpu: 50m
+            memory: 200Mi
+          limits:
+            cpu: 500m
+            memory: 350Mi
 
         # -- Configure the Security Context for the container
         securityContext:
@@ -221,7 +226,6 @@ controllers:
     labels:
       app.kubernetes.io/component: radarr
 
-    # -- Number of desired pods. When using a HorizontalPodAutoscaler, set this to `null`.
     replicas: 1
     strategy: Recreate
 
@@ -281,8 +285,105 @@ controllers:
                 path: /radarr
 
         # -- Set the resource requests / limits for the container.
-        # TODO
-        resources: {}
+        resources:
+          requests:
+            cpu: 50m
+            memory: 250Mi
+          limits:
+            cpu: 250m
+            memory: 350Mi
+
+        # -- Configure the Security Context for the container
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: []
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+  ############################################################################################
+  sonarr:
+    # -- enable the controller.
+    enabled: true
+
+    # -- Set the controller type.
+    # Valid options are deployment, daemonset, statefulset, cronjob or job
+    type: deployment
+    # -- Set annotations on the deployment/statefulset/daemonset/cronjob/job
+    annotations: {}
+    # -- Set labels on the deployment/statefulset/daemonset/cronjob/job
+    labels:
+      app.kubernetes.io/component: sonarr
+
+    replicas: 1
+    strategy: Recreate
+
+    containers:
+      sonarr:
+        image:
+          # https://github.com/hotio/sonarr/pkgs/container/sonarr
+          repository: ghcr.io/hotio/sonarr
+          tag: release-4.0.10.2544
+          pullPolicy: IfNotPresent
+
+        command:
+          - sh
+          - -c
+          - |
+            if [ ! -e /config/config.xml ]; then
+              echo "Applying default Sonarr configuration"
+              cat - > /config/config.xml <<EOF
+            <Config>
+              <BindAddress>*</BindAddress>
+              <Port>8989</Port>
+              <EnableSsl>False</EnableSsl>
+              <LaunchBrowser>False</LaunchBrowser>
+              <AuthenticationMethod>External</AuthenticationMethod>
+              <AuthenticationRequired>Enabled</AuthenticationRequired>
+              <Branch>master</Branch>
+              <LogLevel>info</LogLevel>
+              <UrlBase>/sonarr</UrlBase>
+              <InstanceName>Sonarr</InstanceName>
+              <UpdateMechanism>Docker</UpdateMechanism>
+              <AnalyticsEnabled>False</AnalyticsEnabled>
+            </Config>
+            EOF
+            fi
+
+            exec /app/bin/Sonarr --nobrowser --data=/config
+
+        probes:
+          liveness:
+            enabled: false
+
+          # -- Readiness probe configuration
+          readiness:
+            # -- Enable the readiness probe
+            enabled: true
+            # -- Set this to `true` if you wish to specify your own readinessProbe
+            custom: true
+            # -- sets the probe type when not using a custom probe
+            # @default -- "TCP"
+            type: HTTP
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 8989
+                path: /sonarr
+
+        # -- Set the resource requests / limits for the container.
+        resources:
+          requests:
+            cpu: 50m
+            memory: 200Mi
+          limits:
+            cpu: 250m
+            memory: 350Mi
 
         # -- Configure the Security Context for the container
         securityContext:
@@ -378,7 +479,7 @@ controllers:
             memory: 100Mi
           limits:
             cpu: 500m
-            memory: 500Mi
+            memory: 800Mi
 
         # -- Configure the Security Context for the container
         securityContext:
@@ -491,7 +592,6 @@ service:
         enabled: true
         port: 80
         protocol: HTTP
-        targetPort: 80
 
   prowlarr:
     enabled: true
@@ -504,7 +604,6 @@ service:
         enabled: true
         port: 9696
         protocol: HTTP
-        targetPort: 9696
 
   radarr:
     enabled: true
@@ -517,7 +616,18 @@ service:
         enabled: true
         port: 7878
         protocol: HTTP
-        targetPort: 7878
+
+  sonarr:
+    enabled: true
+    controller: sonarr
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: sonarr
+    ports:
+      http:
+        enabled: true
+        protocol: HTTP
+        port: 8989
 
   qbittorrent:
     enabled: true
@@ -531,7 +641,6 @@ service:
         enabled: true
         port: 8080
         protocol: HTTP
-        targetPort: 8080
 
   metube:
     enabled: true
@@ -544,7 +653,6 @@ service:
         enabled: true
         port: 8081
         protocol: HTTP
-        targetPort: 8081
 
 # -- Configure the ingresses for the chart here.
 
@@ -580,6 +688,13 @@ ingress:
             service:
               # -- Reference a service identifier from this values.yaml
               identifier: radarr
+              # -- Overrides the service port number reference for this path
+              port: http
+          - path: /sonarr
+            pathType: Prefix
+            service:
+              # -- Reference a service identifier from this values.yaml
+              identifier: sonarr
               # -- Overrides the service port number reference for this path
               port: http
           - path: /prowlarr
@@ -732,6 +847,10 @@ persistence:
         radarr:
           - path: /data
             readOnly: false
+      sonarr:
+        sonarr:
+          - path: /data
+            readOnly: false
       metube:
         metube:
           - path: /downloads
@@ -772,6 +891,18 @@ persistence:
     advancedMounts:
       radarr:
         radarr:
+          - path: /config
+
+  sonarr-config:
+    enabled: true
+    type: persistentVolumeClaim
+    # storageClass: null # use the default
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    retain: true
+    advancedMounts:
+      sonarr:
+        sonarr:
           - path: /config
 
 # -- Configure the networkPolicies for the chart here.
