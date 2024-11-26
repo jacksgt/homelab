@@ -1,0 +1,348 @@
+---
+# Hostname is used further down in the Ingress section
+hostname: "olivetin.cubieserver.de"
+
+# Configuration for OliveTin
+# https://docs.olivetin.app/config.html
+config:
+  logLevel: INFO
+  accessControlLists:
+  - matchUsergroups:
+    - admin
+    name: Admins
+    permissions:
+      exec: true
+      view: true
+  actions:
+  - title: Start Arr-Stack
+    shell: kubectl -n jellyfin scale deploy -l app.kubernetes.io/name=arr-stack --replicas=1
+    icon: '&#128250;' # TV icon
+    acls:
+      - Admins
+
+  - title: Stop Arr-Stack
+    shell: kubectl -n jellyfin scale deploy -l app.kubernetes.io/name=arr-stack --replicas=0
+    icon: '&#128250;' # TV icon
+    acls:
+      - Admins
+  - title: Kubernetes version
+    shell: kubectl version
+
+  # TODO
+  # - shell: exit 1
+  #   title: Start full system backup
+  # - shell: exit 1
+  #   title: Powersave mode
+  # - shell: exit 1
+  #   title: Performance mode
+
+  # https://docs.goauthentik.io/docs/add-secure-apps/providers/proxy/
+  authHttpHeaderUsername: X-Authentik-Username
+  authHttpHeaderUserGroup: X-Authentik-Groups
+  defaultPermissions:
+    exec: false
+    view: true
+    logs: false
+
+global:
+  # -- Set an override for the prefix of the fullname
+  nameOverride:
+  # -- Set the entire name definition
+  fullnameOverride:
+  # -- Set additional global labels. Helm templates can be used.
+  labels:
+    app.kubernetes.io/name: olivetin
+
+  # -- Set additional global annotations. Helm templates can be used.
+  annotations: {}
+
+# -- Set default options for all controllers / pods here
+# Each of these options can be overridden on a Controller level
+defaultPodOptions:
+  # -- Set annotations on the Pod. Pod-specific values will be merged with this.
+  annotations: {}
+
+  # -- Specifies whether a service account token should be automatically mounted.
+  automountServiceAccountToken: false
+
+  # -- Enable/disable the generation of environment variables for services.
+  # [[ref]](https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/#accessing-the-service)
+  enableServiceLinks: false
+
+  # -- Set labels on the Pod. Pod-specific values will be merged with this.
+  labels: {}
+
+  # -- Configure the Security Context for the Pod
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+
+controllers:
+
+  ############################################################################################
+  olivetin:
+    # -- enable the controller.
+    enabled: true
+
+    # -- Set the controller type.
+    # Valid options are deployment, daemonset, statefulset, cronjob or job
+    type: deployment
+    # -- Set annotations on the deployment/statefulset/daemonset/cronjob/job
+    annotations: {}
+    # -- Set labels on the deployment/statefulset/daemonset/cronjob/job
+    labels: {}
+
+    pod:
+      annotations:
+        kubernetes.io/config.hash: "{{ print .Values.config | sha256sum }}"
+
+      # Service account token is required for talking with the Kubernetes API
+      # by default the serviceaccount does not have any permissions,
+      # so make sure to add them in the `rbac` section below.
+      automountServiceAccountToken: true
+
+    # -- Number of desired pods. When using a HorizontalPodAutoscaler, set this to `null`.
+    replicas: 1
+    # -- Set the controller upgrade strategy
+    # For Deployments, valid values are Recreate (default) and RollingUpdate.
+    # For StatefulSets, valid values are OnDelete and RollingUpdate (default).
+    # DaemonSets/CronJobs/Jobs ignore this.
+    strategy: RollingUpdate
+    # -- ReplicaSet revision history limit
+    revisionHistoryLimit: 3
+
+    serviceAccount:
+      identifier: main
+
+    initContainers:
+      copy-binaries:
+        image:
+          repository: docker.io/bitnami/kubectl
+          tag: latest
+          pullPolicy: IfNotPresent
+
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -e
+            set -x
+            cp $(command -v kubectl) /usr/local/bin/
+
+    containers:
+      olivetin:
+        image:
+          # https://github.com/OliveTin/OliveTin/releases
+          # https://github.com/olivetin/OliveTin/pkgs/container/olivetin
+          repository: ghcr.io/olivetin/olivetin
+          tag: latest # TODO
+          pullPolicy: IfNotPresent
+
+        # args: ["--port=1337"]
+
+        probes:
+          liveness:
+            enabled: false
+
+          # -- Readiness probe configuration
+          readiness:
+            # -- Enable the readiness probe
+            enabled: false
+            # -- Set this to `true` if you wish to specify your own readinessProbe
+            custom: true
+            # -- sets the probe type when not using a custom probe
+            # @default -- "TCP"
+            type: HTTP
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 1337
+                path: /webUiSettings.json
+
+        # -- Set the resource requests / limits for the container.
+        # TODO
+        resources: {}
+
+        # -- Configure the Security Context for the container
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: []
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+
+serviceAccount:
+  # ignore this line, we create extra ServiceAccounts
+  create: false
+  extraServiceAccounts:
+    main:
+      create: true
+
+# -- Configure the services for the chart here.
+# Additional services can be added by adding a dictionary key similar to the 'main' service.
+# @default -- See below
+service:
+  olivetin:
+    enabled: true
+    controller: olivetin
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        port: 1337
+        protocol: HTTP
+
+# -- Configure the ingresses for the chart here.
+
+ingress:
+  main:
+    enabled: true
+    annotations:
+      # TODO: cert-manager annotations
+      traefik.ingress.kubernetes.io/router.middlewares: "{{ .Release.Namespace }}-{{ .Release.Name }}-authentik-auth-proxy@kubernetescrd"
+
+    ## Configure the hosts for the ingress
+    hosts:
+      - host: "{{ .Values.hostname }}"
+        paths:
+          - path: /
+            pathType: Prefix
+            service:
+              # -- Reference a service identifier from this values.yaml
+              identifier: olivetin
+              # -- Overrides the service port number reference for this path
+              port: http
+
+    # -- Configure TLS for the ingress. Both secretName and hosts can process a Helm template.
+    tls:
+     - secretName: "{{ .Release.Name }}-ingress-secret"
+       hosts:
+         - "{{ .Values.hostname }}"
+
+# -- Configure configMaps for the chart here.
+# Additional configMaps can be added by adding a dictionary key similar to the 'config' object.
+configMaps:
+  config:
+    enabled: true
+    labels: {}
+    annotations:
+      kubernetes.io/config.hash: "{{ print .Values.config | sha256sum }}"
+    data:
+      config.yaml: |
+        {{- toYaml .Values.config | nindent 4 }}
+
+persistence:
+  config:
+    enabled: true
+    type: configMap
+    identifier: config
+    globalMounts:
+      - path: /config
+        readOnly: true
+
+  shared-binaries:
+    enabled: true
+    type: emptyDir
+    globalMounts:
+      - path: /usr/local/bin/
+        readOnly: false
+
+
+# -- Configure the networkPolicies for the chart here.
+# Additional networkPolicies can be added by adding a dictionary key similar to the 'main' networkPolicy.
+# @default -- See below
+networkpolicies:
+  ingress:
+    # -- Enables or disables the networkPolicy item. Defaults to true
+    enabled: true
+
+    # -- Configure which controller this networkPolicy should target
+    controller: olivetin
+
+    # -- Define a custom podSelector for the networkPolicy. This takes precedence over targeting a controller.
+    # podSelector: {}
+
+    # -- The policyTypes for this networkPolicy
+    policyTypes:
+      - Ingress
+      - Egress
+
+    # -- The rulesets for this networkPolicy
+    # https://kubernetes.io/docs/concepts/services-networking/network-policies/#networkpolicy-resource
+    rules:
+      # Allow incoming connections only from the ingress controller
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: traefik
+          ports:
+            - port: 1337
+              protocol: TCP
+      # Allow all egress traffic
+      egress:
+        - {}
+
+# -- Configure any unsupported raw resources here.
+# @default -- See below
+rawResources:
+  # https://blog.cubieserver.de/2023/auth-proxy-with-authentik-and-traefik/
+  authentik-auth-proxy-middleware:
+    apiVersion: traefik.io/v1alpha1
+    kind: Middleware
+    nameOverride: authentik-auth-proxy
+    spec:
+      spec:
+        forwardAuth:
+          address: http://ak-outpost-authentik-embedded-outpost.authentik.svc.cluster.local:9000/outpost.goauthentik.io/auth/traefik
+          authResponseHeaders:
+          - X-authentik-username
+          - X-authentik-groups
+          - X-authentik-email
+          - X-authentik-name
+          - X-authentik-uid
+          - X-authentik-jwt
+          - X-authentik-meta-jwks
+          - X-authentik-meta-outpost
+          - X-authentik-meta-provider
+          - X-authentik-meta-app
+          - X-authentik-meta-version
+          trustForwardHeader: true
+
+# -- Configure the Roles and Role Bindings for the chart here.
+rbac:
+  roles:
+    olivetin:
+      # -- Force replace the name of the object.
+      # forceRename: <force name>
+      # -- Enables or disables the Role. Can be templated.
+      enabled: true
+      # -- Set to Role,ClusterRole
+      type: ClusterRole
+      rules:
+        - apiGroups: ["apps/v1"]
+          resources: ["deployments"]
+          verbs: ["get","list"]
+        - apiGroups: ["apps/v1"]
+          resources: ["deployments/scale"]
+          verbs: ["update"]
+  bindings:
+    olivetin:
+      # -- Force replace the name of the object.
+      # forceRename: <force name>
+      # -- Enables or disables the Role. Can be templated.
+      enabled: true
+      # -- Set to RoleBinding,ClusterRoleBinding
+      type: ClusterRoleBinding
+      # -- Can be an identifier of rbac.roles or a custom name and kind
+      roleRef:
+        identifier: olivetin
+      subjects:
+        - identifier: main
