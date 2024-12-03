@@ -1209,3 +1209,23 @@ releases:
           group: cert-manager.io
           kind: ClusterIssuer
           name: letsencrypt-production
+
+- name: olivetin
+  namespace: olivetin
+  createNamespace: true
+  labels:
+    type: app
+  chart: bjw-s/app-template
+  version: 0.3.0
+  values:
+    - olivetin/olivetin.values.yaml
+    - hostname: "admin.cubieserver.de"
+      controllers:
+        olivetin:
+          containers:
+            olivetin:
+              image:
+                # https://github.com/OliveTin/OliveTin/releases
+                # https://github.com/olivetin/OliveTin/pkgs/container/olivetin
+                repository: ghcr.io/olivetin/olivetin
+                tag: 2024.11.24

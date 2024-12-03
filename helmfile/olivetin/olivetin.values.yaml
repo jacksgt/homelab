@@ -7,9 +7,10 @@ hostname: "olivetin.cubieserver.de"
 config:
   logLevel: INFO
   accessControlLists:
-  - matchUsergroups:
-    - admin
-    name: Admins
+  - name: Admins
+    matchUserNames:
+    # list of admins
+    - jh
     permissions:
       exec: true
       view: true
@@ -95,6 +96,7 @@ controllers:
 
     pod:
       annotations:
+        # TODO: fixme, template not rendering
         kubernetes.io/config.hash: "{{ print .Values.config | sha256sum }}"
 
       # Service account token is required for talking with the Kubernetes API
@@ -136,7 +138,8 @@ controllers:
           # https://github.com/OliveTin/OliveTin/releases
           # https://github.com/olivetin/OliveTin/pkgs/container/olivetin
           repository: ghcr.io/olivetin/olivetin
-          tag: latest # TODO
+          # repository: docker.io/traefik/whoami
+          tag: latest
           pullPolicy: IfNotPresent
 
         # args: ["--port=1337"]
@@ -148,7 +151,7 @@ controllers:
           # -- Readiness probe configuration
           readiness:
             # -- Enable the readiness probe
-            enabled: false
+            enabled: true
             # -- Set this to `true` if you wish to specify your own readinessProbe
             custom: true
             # -- sets the probe type when not using a custom probe
@@ -164,8 +167,13 @@ controllers:
                 path: /webUiSettings.json
 
         # -- Set the resource requests / limits for the container.
-        # TODO
-        resources: {}
+        resources:
+          requests:
+            cpu: 10m
+            memory: 25Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
 
         # -- Configure the Security Context for the container
         securityContext:
@@ -179,8 +187,7 @@ controllers:
 
 
 serviceAccount:
-  # ignore this line, we create extra ServiceAccounts
-  create: false
+  create: false   # ignore this line, we create extra ServiceAccounts below
   extraServiceAccounts:
     main:
       create: true
@@ -327,12 +334,12 @@ rbac:
       # -- Set to Role,ClusterRole
       type: ClusterRole
       rules:
-        - apiGroups: ["apps/v1"]
+        - apiGroups: ["apps"]
           resources: ["deployments"]
           verbs: ["get","list"]
-        - apiGroups: ["apps/v1"]
+        - apiGroups: ["apps"]
           resources: ["deployments/scale"]
-          verbs: ["update"]
+          verbs: ["update","patch"]
   bindings:
     olivetin:
       # -- Force replace the name of the object.
