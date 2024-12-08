@@ -861,7 +861,7 @@ releases:
   - image:
       # https://github.com/nextcloud/server/tags
       # https://hub.docker.com/_/nextcloud/tags
-      tag: "29.0.8-apache"
+      tag: "30.0.3-apache"
 
     ingress:
       enabled: true
