@@ -76,7 +76,7 @@ releases:
 # TODO: also manage backup cronjob with Helmfile
 - name: mariadb
   chart: bitnamicharts-oci/mariadb
-  version: 14.1.2
+  version: 20.1.1
   namespace: mariadb
   createNamespace: true
   labels:
@@ -87,7 +87,7 @@ releases:
   values:
     - image:
         # https://hub.docker.com/r/bitnami/mariadb/tags
-        tag: "10.6"
+        tag: "11.4.4"
         # IMPORTANT: check Nextcloud supported versions!
         # https://docs.nextcloud.com/server/latest/admin_manual/installation/system_requirements.html
       auth:
@@ -105,6 +105,34 @@ releases:
             # backups are handled with mysqldump for consistency
             # (which is not guaranteed with filesystem-level backups)
             backup-enabled: "false"
+
+        # customize resource allocations
+        resourcesPresets: none
+        resources:
+          requests:
+            cpu: 250m
+            memory: 250Mi
+          limits:
+            cpu: 1
+            memory: 1Gi
+
+        # Do not create a PodDisruptionBudget
+        pdb:
+          create: false
+
+      networkPolicy:
+        enabled: true
+        # do not allow outgoing connections (except cluster services, DNS etc.)
+        allowExternalEgress: false
+        # deny all ingress except matching pods
+        # disable the value below for debugging
+        allowExternal: false
+        ingressNSPodMatchLabels:
+          networkpolicy-mariadb-access: "enabled"
+        # Unfortunately it is not easy to manage Namespace labels with Helm, therefore these labels have to be added manually to the relevant namespace.
+        ingressNSMatchLabels:
+          networkpolicy-mariadb-access: "enabled"
+
       # TODO:
       # extraDeploy:
       # - kind: DatabaseInstance
@@ -272,6 +300,7 @@ releases:
   labels:
     type: app
   chart: incubator/raw
+  version: 0.2.5
   values:
   - resources:
     - apiVersion: kci.rocks/v1beta1
@@ -307,6 +336,11 @@ releases:
       tag: "1.22.3"
       pullPolicy: IfNotPresent
       rootless: true
+    # Allow access to MariaDB server
+    # These labels will be propagated to the Deployment as well as the Pods
+    deployment:
+      labels:
+        networkpolicy-mariadb-access: "enabled"
     gitea:
       # set in gitea-values.secret.yaml
       # admin:
@@ -828,6 +862,7 @@ releases:
   labels:
     type: app
   chart: incubator/raw
+  version: 0.2.5
   values:
   - resources:
     - apiVersion: kci.rocks/v1beta1
@@ -857,6 +892,7 @@ releases:
   version: 4.5.0
   secrets:
     - ./environments/{{ .Environment.Name }}/nextcloud-values.secret.yaml
+  # https://github.com/nextcloud/helm/blob/main/charts/nextcloud/values.yaml
   values:
   - image:
       # https://github.com/nextcloud/server/tags
@@ -874,6 +910,10 @@ releases:
         - hosts:
           - cloud.cubieserver.de
           secretName: nextcloud-ingress-secret
+
+    # Allow access to MariaDB server
+    podLabels:
+      networkpolicy-mariadb-access: "enabled"
 
     nextcloud:
       host: cloud.cubieserver.de
@@ -1202,6 +1242,10 @@ releases:
 
       service:
         type: LoadBalancer
+
+      # Allow access to MariaDB server
+      podLabels:
+        networkpolicy-mariadb-access: "enabled"
 
       certificate:
         create: true
