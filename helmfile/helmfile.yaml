@@ -28,6 +28,8 @@ repositories:
    url: https://bjw-s.github.io/helm-charts
  - name: jetstack
    url: https://charts.jetstack.io
+ - name: db-operator
+   url: https://db-operator.github.io/charts
 
   # - name: myOCIRegistry
   #   url: myregistry.azurecr.io
@@ -133,9 +135,25 @@ releases:
         ingressNSMatchLabels:
           networkpolicy-mariadb-access: "enabled"
 
-      # TODO:
-      # extraDeploy:
-      # - kind: DatabaseInstance
+      extraDeploy:
+      - apiVersion: kinda.rocks/v1beta1
+        kind: DbInstance
+        metadata:
+          name: mariadb-instance-prod
+          # cluster-wide resource, no namespace
+        spec:
+          adminSecretRef:
+            # TODO: this secret should be managed by Helm as well
+            Name: mariadb-admin-secret-for-db-instance
+            Namespace: mariadb
+          engine: mysql
+          generic:
+            host: mariadb.mariadb.svc.cluster.local
+            port: 3306
+          monitoring:
+            enabled: false
+          sslConnection:
+            enabled: false
 
 - name: kub-vol-bak
   chart: ./kub-vol-bak
@@ -291,6 +309,50 @@ releases:
                        annotations:
                          kubernetes.io/ingress.class: "" # default ingress controller
                          traefik.ingress.kubernetes.io/router.priority: "100"
+
+- name: db-operator
+  namespace: db-operator
+  labels:
+    type: platform
+  chart: db-operator/db-operator
+  version: 1.30.0
+  values:
+    - crds:
+        install: true
+        keep: true
+      # https://github.com/db-operator/db-operator/releases
+      # https://github.com/db-operator/db-operator/pkgs/container/db-operator
+      image:
+        repository: ghcr.io/db-operator/db-operator
+        tag: 2.10.0
+        pullPolicy: IfNotPresent
+        logLevel: info
+      # "" means watch resources in all namespaces
+      watchNamespace: ""
+      podSecurityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
+      resources:
+        requests:
+          cpu: 10m
+          memory: 20Mi
+        limits:
+          cpu: 100m
+          memory: 100Mi
+      # Allow access to database servers
+      # This label needs to be added to the namespace as well
+      podLabels:
+        networkpolicy-mariadb-access: "enabled"
+      serviceMonitor:
+        enabled: false
+      webhook:
+        certificate:
+          create: true
+          issuer:
+            create: false
+            kind: ClusterIssuer
+            name: selfsigned
 
 # Note: we cannot use the `extraDeploy` value of the Gitea Helm chart for this resource,
 # because the Gitea Helm chart runs a Helm template over the value, which means we loose the
@@ -889,7 +951,7 @@ releases:
     type: app
   # https://github.com/nextcloud/helm/tree/main/charts/nextcloud
   chart: nextcloud/nextcloud
-  version: 4.5.0
+  version: 6.3.0
   secrets:
     - ./environments/{{ .Environment.Name }}/nextcloud-values.secret.yaml
   # https://github.com/nextcloud/helm/blob/main/charts/nextcloud/values.yaml
@@ -950,7 +1012,7 @@ releases:
         runAsUser: 33 # www-data
         runAsGroup: 33
         readOnlyRootFilesystem: true
-        allowPrivilegeEscalation: false # this might break PHP occ shell
+        allowPrivilegeEscalation: false
         capabilities:
           drop: ["ALL"]
 
@@ -982,16 +1044,17 @@ releases:
 
     internalDatabase:
       enabled: false
+
     externalDatabase:
       enabled: true
-      # hardcoded for now, waiting for https://github.com/nextcloud/helm/pull/366
-      database: "nextcloud_test_nextcloud"
       host: "mariadb.mariadb.svc.cluster.local"
       existingSecret:
         enabled: true
+        # this secret is created by the `Database` resource deployed from the `nextcloud-extras` chart
         secretName: nextcloud-db-credentials
-        usernameKey: username
-        passwordKey: password
+        usernameKey: USER
+        passwordKey: PASSWORD
+        databaseKey: DB
 
     # Note to self: Redis is disabled by default
     # redis:
@@ -1031,6 +1094,24 @@ releases:
         # busybox' crond must run as root, otherwise the following errors occur:
         # > crond: can't set groups: Operation not permitted
         runAsUser: 0
+
+- name: nextcloud-extras
+  namespace: nextcloud
+  labels:
+    type: app
+  chart: incubator/raw
+  version: 0.2.5
+  values:
+  - resources:
+    - apiVersion: kinda.rocks/v1beta1
+      kind: Database
+      metadata:
+        name: nextcloud
+      spec:
+        deletionProtected: true
+        instance: mariadb-instance-prod
+        secretName: nextcloud-db-credentials
+        cleanup: true # remove associated secrets and configmaps when deleting this resource
 
 - name: stirling-pdf
   namespace: stirling-pdf
