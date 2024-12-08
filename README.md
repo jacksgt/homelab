@@ -218,6 +218,14 @@ TRUNCATE TABLE oc_bruteforce_attempts;
 
 https://help.nextcloud.com/t/cannot-login-too-many-requests/100905/31
 
+## K3s
+
+Cleanup unused images from nodes:
+
+```sh
+k3s crictl rmi --prune
+```
+
 ## Selfhosted Applications
 
 Lists of self-hosted services, applications and tools:

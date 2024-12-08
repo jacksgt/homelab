@@ -1,6 +1,6 @@
 ---
 # Hostname is used further down in the Ingress section
-hostname: "olivetin.cubieserver.de"
+hostname: ""
 
 # Configuration for OliveTin
 # https://docs.olivetin.app/config.html
@@ -20,7 +20,6 @@ config:
     icon: '&#128250;' # TV icon
     acls:
       - Admins
-
   - title: Stop Arr-Stack
     shell: kubectl -n jellyfin scale deploy -l app.kubernetes.io/name=arr-stack --replicas=0
     icon: '&#128250;' # TV icon
@@ -31,11 +30,21 @@ config:
 
   # TODO
   # - shell: exit 1
-  #   title: Start full system backup
-  # - shell: exit 1
-  #   title: Powersave mode
-  # - shell: exit 1
-  #   title: Performance mode
+  #   title: Start full filesystem backup
+  # - shell: Start MariaDB backup
+  # - shell: Start PostgreSQL backup
+
+  - shell: ssh hp-prodesk-g4 -- powermode.sh powersave
+    title: Powersave mode on hp-prodesk-g4
+    icon: '&#9196;' # down button
+    acls:
+      - Admins
+
+  - shell: ssh hp-prodesk-g4 -- powermode.sh performance
+    title: Performance mode on hp-prodesk-g4
+    icon: '&#9195;' # up button
+    acls:
+      - Admins
 
   # https://docs.goauthentik.io/docs/add-secure-apps/providers/proxy/
   authHttpHeaderUsername: X-Authentik-Username
@@ -212,7 +221,8 @@ ingress:
   main:
     enabled: true
     annotations:
-      # TODO: cert-manager annotations
+      cert-manager.io/cluster-issuer: letsencrypt-production
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
       traefik.ingress.kubernetes.io/router.middlewares: "{{ .Release.Namespace }}-{{ .Release.Name }}-authentik-auth-proxy@kubernetescrd"
 
     ## Configure the hosts for the ingress
@@ -261,6 +271,14 @@ persistence:
       - path: /usr/local/bin/
         readOnly: false
 
+  ssh-keys:
+    enabled: true
+    type: secret
+    name: olivetin-ssh-keys
+    defaultMode: 0600
+    globalMounts:
+      - path: /home/olivetin/.ssh
+        readOnly: true
 
 # -- Configure the networkPolicies for the chart here.
 # Additional networkPolicies can be added by adding a dictionary key similar to the 'main' networkPolicy.

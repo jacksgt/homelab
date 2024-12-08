@@ -1341,7 +1341,7 @@ releases:
   labels:
     type: app
   chart: bjw-s/app-template
-  version: 0.3.0
+  version: "3.5.1"
   values:
     - olivetin/olivetin.values.yaml
     - hostname: "admin.cubieserver.de"
