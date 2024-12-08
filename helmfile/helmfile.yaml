@@ -828,7 +828,7 @@ releases:
   # https://github.com/goauthentik/helm
   # note Authentik releases and Helm chart releases are in-sync
   chart: authentik/authentik
-  version: "2023.10.3"
+  version: "2024.10.4"
   secrets:
     - ./environments/{{ .Environment.Name }}/authentik-values.secret.yaml
   # https://github.com/goauthentik/helm/blob/main/charts/authentik/values.yaml
@@ -845,44 +845,44 @@ releases:
         postgresql: null # postgres config is set via environment variables
         # "secret_key" is set in secret values.yaml
 
-      envFrom:
-        - secretRef:
-            name: authentik-db-credentials
+      server:
+        envFrom:
+          - secretRef:
+              name: authentik-db-credentials
 
-      livenessProbe:
-        enabled: true
-        initialDelaySeconds: 60
-        periodSeconds: 30
+        livenessProbe:
+          enabled: true
+          initialDelaySeconds: 60
+          periodSeconds: 30
 
-      ingress:
-        enabled: true
-        annotations:
-          cert-manager.io/cluster-issuer: letsencrypt-production
-          traefik.ingress.kubernetes.io/router.entrypoints: websecure
-        hosts:
-        - host: auth.cubieserver.de
-          paths:
-          - path: /
-            pathType: Prefix
-        tls:
-        - hosts:
-          - auth.cubieserver.de
-          secretName: authentik-ingress-cert
+        ingress:
+          enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-production
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          hosts: [ "auth.cubieserver.de" ]
+          tls:
+          - hosts:
+            - auth.cubieserver.de
+            secretName: authentik-ingress-cert
 
-      resources:
-        server:
+        resources:
           requests:
             memory: 450Mi
             cpu: 10m
           limits:
             memory: 900Mi
-        worker:
-          requests:
-            memory: 250Mi
-            cpu: 10m
-          limits:
-            memory: 500Mi
-            cpu: 100m
+        securityContext:
+          runAsNonRoot: true
+        podSecurityContext:
+          allowPrivilegeEscalation: false
+          capabilities: { drop: ["ALL"] }
+          readOnlyRootFilesystem: true
+
+        metrics:
+          enabled: true
+          serviceMonitor:
+            enabled: true
 
       # deploy Bitnami's Redis chart as a dependency
       redis:
@@ -895,29 +895,26 @@ releases:
             enabled: false
 
       # we deploy our own postgres instance
-      poostgresql:
+      postgresql:
         enabled: false
 
-      # for server
-      securityContext:
-        runAsNonRoot: true
-      podSecurityContext:
-        allowPrivilegeEscalation: false
-        capabilities: { drop: ["ALL"] }
-        readOnlyRootFilesystem: true
-
-      # for worker
       worker:
+        envFrom:
+          - secretRef:
+              name: authentik-db-credentials
+        resources:
+          requests:
+            memory: 250Mi
+            cpu: 10m
+          limits:
+            memory: 500Mi
+            cpu: 100m
         securityContext:
           runAsNonRoot: true
         podSecurityContext:
           allowPrivilegeEscalation: false
           capabilities: { drop: ["ALL"] }
           readOnlyRootFilesystem: true
-
-      prometheus:
-        serviceMonitor:
-          create: true
 
 - name: authentik-extras
   namespace: authentik
@@ -927,6 +924,7 @@ releases:
   version: 0.2.5
   values:
   - resources:
+      # TODO: move to Database.kinda.rocks CRD
     - apiVersion: kci.rocks/v1beta1
       kind: Database
       metadata:
