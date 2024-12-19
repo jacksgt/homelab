@@ -1,0 +1,253 @@
+# helm upgrade --install vector -f vector.values.yaml vector/vector --version 0.38.1
+
+# Each role is created with the following workloads:
+# Agent = DaemonSet
+# Aggregator = StatefulSet
+# Stateless-Aggregator = Deployment
+role: "Agent"
+
+# rollWorkload -- Add a checksum of the generated ConfigMap to workload annotations.
+rollWorkload: true
+
+# commonLabels -- Add additional labels to all created resources.
+commonLabels: {}
+
+# Define the Vector image to use.
+image:
+  repository: docker.io/timberio/vector
+  pullPolicy: IfNotPresent
+  tag: "0.43.1-debian"
+
+# Create a Secret resource for Vector to use.
+secrets:
+  # secrets.generic -- Each Key/Value will be added to the Secret's data key, each value should be raw and NOT base64
+  # encoded. Any secrets can be provided here. It's commonly used for credentials and other access related values.
+  # **NOTE: Don't commit unencrypted secrets to git!**
+  generic: {}
+    # my_variable: "my-secret-value"
+    # datadog_api_key: "api-key"
+    # awsAccessKeyId: "access-key"
+    # awsSecretAccessKey: "secret-access-key"
+
+
+rbac:
+  # rbac.create -- If true, create and use RBAC resources. Only valid for the "Agent" role.
+  create: true
+
+# podAnnotations -- Set annotations on Vector Pods.
+podAnnotations: {}
+
+# podLabels -- Set labels on Vector Pods.
+podLabels:
+  vector.dev/exclude: "true"
+
+# podSecurityContext -- Allows you to overwrite the default [PodSecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+# for Vector Pods.
+podSecurityContext: {}
+
+# workloadResourceAnnotations -- Set annotations on the Vector DaemonSet, Deployment or StatefulSet.
+workloadResourceAnnotations: {}
+
+# securityContext -- Specify securityContext on Vector containers.
+securityContext: {}
+
+# command -- Override Vector's default command.
+command: []
+
+# args -- Override Vector's default arguments.
+args:
+  - --config-dir
+  - "/etc/vector/"
+
+# env -- Set environment variables for Vector containers.
+env: []
+  # - name: MY_VARIABLE
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: vector
+  #       key: my_variable
+  # - name: AWS_ACCESS_KEY_ID
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: vector
+  #       key: awsAccessKeyId
+
+# envFrom -- Define environment variables from Secrets or ConfigMaps.
+envFrom: []
+  # - secretRef:
+  #     name: vector
+
+# resources -- Set Vector resource requests and limits.
+resources: {}
+  # requests:
+  #   cpu: 200m
+  #   memory: 256Mi
+  # limits:
+  #   cpu: 200m
+  #   memory: 256Mi
+
+# Configuration for Vector's Service.
+service:
+  # service.enabled -- If true, create and provide a Service resource for Vector.
+  enabled: true
+  # service.type -- Set the type for Vector's Service.
+  type: "ClusterIP"
+  # service.annotations -- Set annotations on Vector's Service.
+  annotations: {}
+  # service.topologyKeys -- Specify the [topologyKeys](https://kubernetes.io/docs/concepts/services-networking/service-topology/#using-service-topology)
+  # field on Vector's Service.
+  topologyKeys: []
+  #   - "kubernetes.io/hostname"
+  #   - "topology.kubernetes.io/zone"
+  #   - "topology.kubernetes.io/region"
+  #   - "*"
+  # service.ports -- Manually set the Service ports, overriding automated generation of Service ports.
+  ports: []
+  # service.externalTrafficPolicy -- Specify the [externalTrafficPolicy](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip).
+  externalTrafficPolicy: ""
+  # service.internalTrafficPolicy -- Specify the [internalTrafficPolicy](https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy).
+  internalTrafficPolicy: ""
+  # service.loadBalancerIP -- Specify the [loadBalancerIP](https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer).
+  loadBalancerIP: ""
+  # service.ipFamilyPolicy -- Configure [IPv4/IPv6 dual-stack](https://kubernetes.io/docs/concepts/services-networking/dual-stack/).
+  ipFamilyPolicy: ""
+  # service.ipFamilies -- Configure [IPv4/IPv6 dual-stack](https://kubernetes.io/docs/concepts/services-networking/dual-stack/).
+  ipFamilies: []
+
+# Configuration for Vector's Headless Service.
+serviceHeadless:
+  # serviceHeadless.enabled -- If true, create and provide a Headless Service resource for Vector.
+  enabled: false
+
+# https://vector.dev/docs/reference/configuration/
+customConfig:
+    data_dir: /vector-data-dir
+    api:
+      enabled: true
+      address: 127.0.0.1:8686
+      playground: false
+    sources:
+      # https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/
+      k8s_logs:
+        type: kubernetes_logs
+        node_annotation_fields:
+          node_labels: "" # do not record node labels in events
+        pod_annotation_fields:
+          # do not record these fields in events
+          container_image_id: ""
+          pod_ip: ""
+          pod_ips: ""
+          pod_uid: ""
+
+      #
+      # host_metrics:
+      #   filesystem:
+      #     devices:
+      #       excludes: [binfmt_misc]
+      #     filesystems:
+      #       excludes: [binfmt_misc]
+      #     mountpoints:
+      #       excludes: ["*/proc/sys/fs/binfmt_misc"]
+      #   type: host_metrics
+
+      #
+      internal_metrics:
+        type: internal_metrics
+
+      # Allows receiving logs from other Vector instances in the cluster (nextcloud, traefik, ...)
+      # https://vector.dev/docs/reference/configuration/sources/vector/
+      external_vector:
+        type: vector
+        address: 0.0.0.0:9191
+
+      # https://vector.dev/docs/reference/configuration/sources/journald/
+      host_logs:
+        type: journald
+        exclude_units: []
+        include_units: []
+        journalctl_path: "/host/usr/bin/journalctl"
+        journal_directory: "/var/log/journal"
+
+    transforms:
+      # Drop logs line that originate from pods or namespaces with logs.cubieserver.de/drop label
+      # or are empty
+      drop_k8s_logs:
+        type: filter
+        inputs: [k8s_logs]
+        condition: |
+          !( exists(.kubernetes.namespace_labels."logs.cubieserver.de/drop") || exists(.kubernetes.pod_labels."logs.cubieserver.de/drop") || is_nullish(.message) )
+
+      # if a pod has the annotation "logs.cubieserver.de/parse-as=json"
+      # we treat the log line as JSON and store the fields in the .json field of the event.
+      k8s_parse_logs:
+        type: remap
+        inputs: [drop_k8s_logs]
+        source: |
+          if .kubernetes.pod_labels."logs.cubieserver.de/parse-as" == "json" {
+            .json = parse_json!(string!(.message))
+          }
+          # add other formats as necessary (logfmt, apache log, nginx log, syslog)
+
+    sinks:
+      prom_exporter:
+        type: prometheus_exporter
+        inputs:
+          # - host_metrics
+          - internal_metrics
+        address: 0.0.0.0:9090
+      stdout:
+        type: console
+        inputs:
+          - k8s_parse_logs
+          - host_logs
+        encoding:
+          codec: json
+
+defaultVolumes:
+  - name: var-log
+    hostPath:
+      path: "/var/log/"
+  - name: var-lib
+    hostPath:
+      path: "/var/lib/"
+  - name: procfs
+    hostPath:
+      path: "/proc"
+  - name: sysfs
+    hostPath:
+      path: "/sys"
+  - name: bin
+    hostPath:
+      path: "/usr/bin"
+
+defaultVolumeMounts:
+  - name: var-log
+    mountPath: "/var/log/"
+    readOnly: true
+  - name: var-lib
+    mountPath: "/var/lib"
+    readOnly: true
+  - name: procfs
+    mountPath: "/host/proc"
+    readOnly: true
+  - name: sysfs
+    mountPath: "/host/sys"
+    readOnly: true
+  - name: bin
+    mountPath: "/host/usr/bin"
+    readOnly: true
+
+# Log level for Vector.
+logLevel: "info"
+
+# extraObjects -- Create extra manifests via values. Would be passed through `tpl` for templating.
+extraObjects: []
+  # - apiVersion: v1
+  #   kind: ConfigMap
+  #   metadata:
+  #     name: vector-dashboards
+  #     labels:
+  #       grafana_dashboard: "1"
+  #   data:
+  #     vector.json: |
+  #       {{ .Files.Get "dashboards/vector.json" | fromJson | toJson }}
