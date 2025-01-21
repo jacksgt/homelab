@@ -1,4 +1,4 @@
-- name: Install basic system utilities
+- name: Install basic system utilities [debian]
   hosts: "debian"
   tasks:
     - name: Install basic system utilities
@@ -25,14 +25,39 @@
           - unattended-upgrades
           - apt-listchanges
         state: present
+      # TODO: set up email config on the host
+      # https://wiki.debian.org/UnattendedUpgrades
 
-# TODO: set up email config on the host
-# https://wiki.debian.org/UnattendedUpgrades
+- name: Install basic system utilities [mac]
+  hosts: mac
+  connection: local
+  tasks:
+    - ansible.builtin.homebrew:
+        name:
+          - ansible
+          - ansible-language-server
+          - crane # container images
+          - editorconfig # for Emacs
+          - emacs
+          - font-hack # for Emacs
+          - gopls
+          - kubectl
+          - openshift-cli
+          - helm
+          - ispell # for Emacs
+          - ncdu
+          - kopia
+          - rclone
+          - restic
+          - ripgrep
+          - sshuttle # for Dev
+          - yq # for Dev
+        state: present
 
 # TODO: Take periodic snapshots of root filesystem with "snapper"
 
-- name: Install powermode.sh script
-  hosts: "*"
+- name: Install powermode.sh script [linux]
+  hosts: linux
   tasks:
     - name: Install powermode.sh script
       ansible.builtin.copy:
@@ -46,5 +71,3 @@
         name:
           - cpufrequtils
         state: present
-
-# TODO: Take periodic snapshots of root filesystem with "snapper"
