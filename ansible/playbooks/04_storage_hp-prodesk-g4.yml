@@ -1,0 +1,122 @@
+---
+- name: Set up storage devices for hp-prodesk-g4
+  hosts: hp-prodesk-g4
+  tasks:
+    - name: Ensure packages are installed
+      ansible.builtin.apt:
+        name:
+          - btrfs-compsize
+          - btrfs-progs
+          - xfsprogs
+        state: present
+
+    # Note that `state: present` means that Ansible will ensure the entry in /etc/fstab
+    # but WILL NOT automatically mount the partition.
+    # Use a manual `mount -a` or `systemctl reboot` for this purpose.
+    - name: Mount XFS data partition
+      ansible.posix.mount:
+        state: present
+        # /dev/nvme0n1p4
+        src: UUID=79c648aa-d9d3-4d4b-8504-65eb80754c91
+        path: /data/xfs
+        fstype: xfs
+        opts: defaults
+        dump: '0'
+        passno: '0'
+      tags:
+        - data-xfs
+
+    - name: Mount BTRFS data disk (partitonless)
+      ansible.posix.mount:
+        state: present
+        # /dev/sda
+        src: UUID=6f5aae00-4d60-4b7f-80f2-652750906ab8
+        path: /data/btrfs
+        fstype: btrfs
+        opts: defaults,noatime,ssd
+        dump: '0'
+        passno: '0'
+      tags:
+        - data-btrfs
+
+    - name: Deploy script to run BTRFS scrub and send notifications
+      ansible.builtin.copy:
+        dest: /usr/local/sbin/btrfs-scrub-and-notify.sh
+        mode: 0750
+        content: |
+          #!/bin/bash
+          # Managed by Ansible
+
+          # https://wiki.archlinux.org/title/Identify_damaged_files#btrfs
+          for mount in "$@"; do
+            btrfs scrub start -Bd "$mount"
+          done
+
+          file_errors=$(journalctl --output cat | grep 'BTRFS .* i/o error' | sort -u)
+          if [ -n "$file_errors" ]; then
+            echo "ALERT! Found broken files:"
+            echo -e "$file_errors"
+            # TODO: nfty.sh notifications: https://ntfy.sh/
+            exit 1
+          fi
+
+          exit 0
+      tags:
+        - data-btrfs
+
+    - name: Set up systemd service for BTRFS scrub
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/btrfs-scrub.service
+        content: |
+          # Managed by Ansible
+          [Unit]
+          Description=Reads all BTRFS data and metadata blocks and verify its checksums
+          After=local-fs.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/btrfs-scrub-and-notify.sh /data/btrfs
+
+          [Install]
+          WantedBy=multi-user.target
+      notify:
+        - systemd-daemon-reload
+      tags:
+        - data-btrfs
+
+    - name: Set up systemd timer for BTRFS scrub
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/btrfs-scrub.timer
+        content: |
+          # Managed by Ansible
+          [Unit]
+          Description=Run btrfs-scrub daily
+
+          [Timer]
+          OnBootSec=15min
+          OnCalendar=*-*-* 05:30:00
+          RandomizedDelaySec=10min
+
+          [Install]
+          WantedBy=timers.target
+      notify:
+        - systemd-daemon-reload
+      tags:
+        - data-btrfs
+
+    # Run systemctl daemon-reload (if necessary) before trying to enable the timer
+    - name: Flush handlers
+      meta: flush_handlers
+
+    - name: Enable systemd timer for BTRFS scrub
+      ansible.builtin.service:
+        name: btrfs-scrub.timer
+        enabled: true
+      tags:
+        - data-btrfs
+
+  # TODO: set up btrfs-balance once a month
+
+  handlers:
+    - name: systemd-daemon-reload
+      ansible.builtin.command: systemctl daemon-reload
