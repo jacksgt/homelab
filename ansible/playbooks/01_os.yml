@@ -14,8 +14,9 @@
           - nload
           - psmisc # killall, pgrep etc.
           - rsync
+          - smartmontools # for smartctl
           - strace
-          - xfsprogs
+          - sqlite3
         state: present
         update_cache: true
 

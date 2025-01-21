@@ -38,3 +38,5 @@
         daemon_reload: true
         state: restarted
         enabled: true
+
+    - TODO: name: Create systemd service for cleaning up unused images
