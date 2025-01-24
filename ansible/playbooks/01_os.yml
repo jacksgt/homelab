@@ -29,7 +29,7 @@
       # TODO: set up email config on the host
       # https://wiki.debian.org/UnattendedUpgrades
 
-- name: Install basic system utilities [mac]
+- name: Install Mac CLI utilities [mac]
   hosts: mac
   connection: local
   tasks:
@@ -38,22 +38,39 @@
           - ansible
           - ansible-language-server
           - crane # container images
+          - curl
           - editorconfig # for Emacs
-          - emacs
+          - fish
           - font-hack # for Emacs
+          - git
+          - go
           - gopls
-          - kubectl
-          - openshift-cli
           - helm
           - ispell # for Emacs
-          - ncdu
           - kopia
+          - kubectl
+          - ncdu
+          - openshift-cli
+          - python3
           - rclone
           - restic
+          - rip2 # rm-improved
           - ripgrep
+          - rsync
+          - sqlite3
           - sshuttle # for Dev
           - yq # for Dev
         state: present
+
+- name: Install Mac apps
+  hosts: mac
+  connection: local
+  tasks:
+    - ansible.builtin.homebrew_cask:
+        name:
+          - emacs
+          - maccy # clipboard manager
+          - nextcloud
 
 # TODO: Take periodic snapshots of root filesystem with "snapper"
 
