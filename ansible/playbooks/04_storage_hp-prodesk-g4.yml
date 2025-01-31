@@ -1,6 +1,8 @@
 ---
 - name: Set up storage devices for hp-prodesk-g4
   hosts: hp-prodesk-g4
+  vars:
+    ntfy_topic: ''
   tasks:
     - name: Ensure packages are installed
       ansible.builtin.apt:
@@ -39,13 +41,19 @@
       tags:
         - data-btrfs
 
+    - name: Delete old script
+      ansible.builtin.file:
+        path: /usr/local/sbin/btrfs-scrub-and-notify.sh
+        state: absent
+
     - name: Deploy script to run BTRFS scrub and send notifications
       ansible.builtin.copy:
-        dest: /usr/local/sbin/btrfs-scrub-and-notify.sh
+        dest: /usr/local/sbin/btrfs-scrub.sh
         mode: 0750
         content: |
           #!/bin/bash
           # Managed by Ansible
+          set -eo pipefail
 
           # https://wiki.archlinux.org/title/Identify_damaged_files#btrfs
           for mount in "$@"; do
@@ -56,7 +64,9 @@
           if [ -n "$file_errors" ]; then
             echo "ALERT! Found broken files:"
             echo -e "$file_errors"
-            # TODO: nfty.sh notifications: https://ntfy.sh/
+            if [ -n "$NTFY_TOPIC" ]; then
+              curl -d "Found broken files on $(hostname). Please check 'btrfs-scrub.service' logs." "https://ntfy.sh/${NTFY_TOPIC}" || true
+            fi
             exit 1
           fi
 
@@ -67,6 +77,9 @@
     - name: Set up systemd service for BTRFS scrub
       ansible.builtin.copy:
         dest: /etc/systemd/system/btrfs-scrub.service
+        owner: root
+        group: root
+        mode: 0640
         content: |
           # Managed by Ansible
           [Unit]
@@ -75,7 +88,10 @@
 
           [Service]
           Type=oneshot
-          ExecStart=/usr/local/sbin/btrfs-scrub-and-notify.sh /data/btrfs
+          {% if ntfy_topic is defined and ntfy_topic != '' %}
+          Environment="NFTY_TOPIC={{ NTFY_TOPIC }}"
+          {% endif %}
+          ExecStart=/usr/local/sbin/btrfs-scrub.sh /data/btrfs
 
           [Install]
           WantedBy=multi-user.target
@@ -93,8 +109,9 @@
           Description=Run btrfs-scrub daily
 
           [Timer]
-          OnBootSec=15min
+          # Run every morning and shortly after booting
           OnCalendar=*-*-* 05:30:00
+          OnBootSec=15min
           RandomizedDelaySec=10min
 
           [Install]
@@ -114,8 +131,6 @@
         enabled: true
       tags:
         - data-btrfs
-
-  # TODO: set up btrfs-balance once a month
 
   handlers:
     - name: systemd-daemon-reload

@@ -37,6 +37,7 @@
         name:
           - ansible
           - ansible-language-server
+          - age # for file encryption
           - crane # container images
           - curl
           - editorconfig # for Emacs
@@ -45,6 +46,7 @@
           - git
           - go
           - gopls
+          - gron
           - helm
           - ispell # for Emacs
           - kopia
@@ -57,6 +59,7 @@
           - rip2 # rm-improved
           - ripgrep
           - rsync
+          - sops # for file encryption
           - sqlite3
           - sshuttle # for Dev
           - yq # for Dev
@@ -71,6 +74,7 @@
           - emacs
           - maccy # clipboard manager
           - nextcloud
+          - podman-desktop
 
 # TODO: Take periodic snapshots of root filesystem with "snapper"
 
