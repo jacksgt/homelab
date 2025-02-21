@@ -1,7 +1,0 @@
-apiVersion: source.toolkit.fluxcd.io/v1beta2
-kind: HelmRepository
-metadata:
-  name: kloeckneri
-spec:
-  interval: 1h
-  url: https://kloeckner-i.github.io/charts

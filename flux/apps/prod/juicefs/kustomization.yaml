@@ -1,9 +1,0 @@
-# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
----
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namespace: juicefs
-resources:
-  - namespace.yaml
-  - values.secret.yaml
-  - ../../bases/juicefs/

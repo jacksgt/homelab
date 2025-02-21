@@ -1,9 +1,0 @@
-# NOTE:
-# Ideally these resources should be deployed along with their respective services, so we can avoid duplication of secrets.
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - pg-instance-prod.yaml
-  - mariadb-instance-prod.yaml
-  - postgres-admin-credentials.secret.yaml
-  - mariadb-admin-credentials.secret.yaml
