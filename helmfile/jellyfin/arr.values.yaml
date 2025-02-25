@@ -65,8 +65,9 @@ controllers:
     containers:
       filebrowser:
         image:
+          # https://github.com/filebrowser/filebrowser/releases
           repository: docker.io/filebrowser/filebrowser
-          tag: v2.30.0
+          tag: v2.32.0
           pullPolicy: IfNotPresent
 
         command:
@@ -141,8 +142,9 @@ controllers:
     containers:
       prowlarr:
         image:
+          # https://github.com/Prowlarr/Prowlarr/releases
           repository: ghcr.io/hotio/prowlarr
-          tag: release-1.24.3.4754
+          tag: release-1.31.2.4975
           pullPolicy: IfNotPresent
 
         command:
@@ -232,8 +234,9 @@ controllers:
     containers:
       radarr:
         image:
+          # https://github.com/Radarr/Radarr/releases
           repository: ghcr.io/hotio/radarr
-          tag: release-5.11.0.9244
+          tag: release-5.19.3.9730
           pullPolicy: IfNotPresent
 
         command:
@@ -323,9 +326,10 @@ controllers:
     containers:
       sonarr:
         image:
+          #
           # https://github.com/hotio/sonarr/pkgs/container/sonarr
           repository: ghcr.io/hotio/sonarr
-          tag: release-4.0.10.2544
+          tag: release-4.0.13.2932
           pullPolicy: IfNotPresent
 
         command:
@@ -420,8 +424,9 @@ controllers:
     containers:
       qbittorrent:
         image:
+          # https://github.com/hotio/qbittorrent/pkgs/container/qbittorrent
           repository: ghcr.io/hotio/qbittorrent
-          tag: release-5.0.0
+          tag: release-5.0.4
           pullPolicy: IfNotPresent
 
         command:
@@ -455,7 +460,7 @@ controllers:
           - name: XDG_CACHE_HOME
             value: /tmp/cache
           - name: XDG_DATA_HOME
-            value: /tmp/local/share
+            value: /config/local/share
 
         probes:
           liveness:
@@ -510,8 +515,9 @@ controllers:
     containers:
       metube:
         image:
+          # https://github.com/alexta69/metube/pkgs/container/metube
           repository: ghcr.io/alexta69/metube
-          tag: 2024-04-12
+          tag: 2025-02-20
           pullPolicy: IfNotPresent
 
         env:

@@ -14,15 +14,18 @@ config:
     permissions:
       exec: true
       view: true
+      logs: true
   actions:
   - title: Start Arr-Stack
     shell: kubectl -n jellyfin scale deploy -l app.kubernetes.io/name=arr-stack --replicas=1
     icon: '&#128250;' # TV icon
+    timeout: 15
     acls:
       - Admins
   - title: Stop Arr-Stack
     shell: kubectl -n jellyfin scale deploy -l app.kubernetes.io/name=arr-stack --replicas=0
     icon: '&#128250;' # TV icon
+    timeout: 15
     acls:
       - Admins
   - title: Kubernetes version
