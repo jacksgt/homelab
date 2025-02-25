@@ -193,9 +193,10 @@ releases:
   namespace: monitoring
   labels:
     type: platform
-  version: 4.2.0
+  # https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-adapter/Chart.yaml
+  # https://github.com/kubernetes-sigs/prometheus-adapter/releases
+  version: 4.11.0
   chart: prometheus-community/prometheus-adapter
-  # https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
   values:
   - monitoring/prometheus-adapter.values.yaml
 
@@ -204,8 +205,9 @@ releases:
   createNamespace: true
   labels:
     type: platform
+  # https://github.com/cert-manager/cert-manager/releases
   chart: jetstack/cert-manager
-  version: v1.16.1
+  version: v1.17.1
   values:
     - crds:
         enabled: true

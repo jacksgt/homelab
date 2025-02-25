@@ -9,7 +9,7 @@ deployment:
   replicas: 1
 image:
   # https://github.com/traefik/traefik/blob/master/CHANGELOG.md
-  tag: v3.2.0
+  tag: v3.3.3
 ingressRoute:
   dashboard:
     enabled: true

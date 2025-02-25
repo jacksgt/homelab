@@ -1,3 +1,5 @@
+# https://github.com/prometheus-community/helm-charts/blob/0defc558f5c38e557d89534052d962c92df59932/charts/prometheus-adapter/values.yaml
+
 prometheus:
   url: http://kube-prometheus-stack-prometheus
   port: 9090
