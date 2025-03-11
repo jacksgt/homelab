@@ -70,16 +70,16 @@
         group: root
         mode: '0644'
 
-    - name: Create timer for pruning K3s container images (weekly)
+    - name: Create timer for pruning K3s container images
       ansible.builtin.copy:
         dest: /etc/systemd/system/k3s-prune.timer
         content: |
           [Unit]
-          Description=Weekly prune of K3s container images
+          Description=Monthly prune of K3s container images
           Requires=k3s-prune.service
 
           [Timer]
-          OnCalendar=weekly
+          OnCalendar=monthly
           Persistent=true
           RandomizedDelaySec=1h
 
