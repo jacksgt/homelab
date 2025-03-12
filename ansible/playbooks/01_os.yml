@@ -67,10 +67,6 @@
           - yq # for Dev
         state: present
 
-- name: Install Mac apps
-  hosts: mac
-  connection: local
-  tasks:
     - ansible.builtin.homebrew_cask:
         name:
           - emacs
@@ -96,3 +92,20 @@
         name:
           - cpufrequtils
         state: present
+
+  # https://9to5mac.com/2025/03/07/stop-typing-your-sudo-password-use-touch-id-instead/
+- name: Use Touch ID for sudo [mac]
+  hosts: mac
+  connection: local
+  become: true
+  tasks:
+    - name: Enable Touch ID PAM module
+      ansible.builtin.copy:
+        content: |
+          # Managed by Ansible
+          # see /etc/pam.d/sudo_local.template
+          auth       sufficient     pam_tid.so
+        dest: /etc/pam.d/sudo_local
+        owner: root
+        group: wheel
+        mode: '0644'
