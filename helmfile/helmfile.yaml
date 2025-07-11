@@ -1292,6 +1292,29 @@ releases:
             - secretName: "media.cubieserver.de-ingress-cert"
               hosts: ["media.cubieserver.de"]
 
+- name: webtools
+  namespace: webtools
+  createNamespace: true
+  labels:
+    type: app
+  chart: bjw-s/app-template
+  version: "3.5.1"
+  values:
+    - webtools/webtools.values.yaml
+    - ingress:
+        it-tools:
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-production
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        rustpad:
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-production
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        cyberchef:
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-production
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+
 - name: ejabberd
   namespace: ejabberd
   labels:
