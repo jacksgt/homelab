@@ -1,0 +1,262 @@
+---
+global:
+  # -- Set an override for the prefix of the fullname
+  nameOverride:
+  # -- Set the entire name definition
+  fullnameOverride:
+  # -- Set additional global labels. Helm templates can be used.
+  labels:
+    app.kubernetes.io/name: webtools
+
+defaultPodOptions:
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+
+controllers:
+  ############################################################################################
+  # IT Tools - Collection of handy online tools for developers
+  # https://github.com/CorentinTh/it-tools
+  it-tools:
+    enabled: true
+    type: deployment
+    labels:
+      app.kubernetes.io/component: it-tools
+    replicas: 1
+    strategy: RollingUpdate
+
+    containers:
+      it-tools:
+        image:
+          repository: ghcr.io/corentinth/it-tools
+          tag: latest
+          pullPolicy: Always
+
+        probes:
+          liveness:
+            enabled: false
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 80
+                path: /
+
+        # resources:
+        #   requests:
+        #     cpu: 10m
+        #     memory: 50Mi
+        #   limits:
+        #     cpu: 100m
+        #     memory: 200Mi
+
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+  ############################################################################################
+  # Rustpad - Efficient and minimal collaborative code editor
+  # https://github.com/ekzhang/rustpad
+  rustpad:
+    enabled: true
+    type: deployment
+    labels:
+      app.kubernetes.io/component: rustpad
+    replicas: 1
+    strategy: RollingUpdate
+
+    containers:
+      rustpad:
+        image:
+          repository: docker.io/ekzhang/rustpad
+          tag: latest
+          pullPolicy: Always
+
+        probes:
+          liveness:
+            enabled: false
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 3030
+                path: /
+
+        # resources:
+        #   requests:
+        #     cpu: 10m
+        #     memory: 50Mi
+        #   limits:
+        #     cpu: 100m
+        #     memory: 200Mi
+
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+  ############################################################################################
+  # CyberChef - The Cyber Swiss Army Knife
+  # https://github.com/gchq/CyberChef
+  cyberchef:
+    enabled: true
+    type: deployment
+    labels:
+      app.kubernetes.io/component: cyberchef
+    replicas: 1
+    strategy: RollingUpdate
+
+    containers:
+      cyberchef:
+        image:
+          repository: ghcr.io/gchq/cyberchef
+          tag: latest
+          pullPolicy: Always
+
+        probes:
+          liveness:
+            enabled: false
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              timeoutSeconds: 1
+              failureThreshold: 3
+              httpGet:
+                port: 8000
+                path: /
+
+        # resources:
+        #   requests:
+        #     cpu: 10m
+        #     memory: 50Mi
+        #   limits:
+        #     cpu: 100m
+        #     memory: 200Mi
+
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+
+        terminationMessagePolicy: FallbackToLogsOnError
+
+
+serviceAccount:
+  create: true
+
+
+service:
+  it-tools:
+    enabled: true
+    controller: it-tools
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: it-tools
+    ports:
+      http:
+        enabled: true
+        port: 80
+        protocol: HTTP
+
+  rustpad:
+    enabled: true
+    controller: rustpad
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: rustpad
+    ports:
+      http:
+        enabled: true
+        port: 3030
+        protocol: HTTP
+
+  cyberchef:
+    enabled: true
+    controller: cyberchef
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: cyberchef
+    ports:
+      http:
+        enabled: true
+        port: 8000
+        protocol: HTTP
+
+ingress:
+  it-tools:
+    enabled: true
+    hosts:
+      - host: it-tools.cubieserver.de
+        paths:
+          - path: /
+            pathType: Prefix
+            service:
+              identifier: it-tools
+              port: http
+    tls:
+     - secretName: it-tools-ingress-secret
+       hosts:
+         - it-tools.cubieserver.de
+
+  rustpad:
+    enabled: true
+    hosts:
+      - host: pad.cubieserver.de
+        paths:
+          - path: /
+            pathType: Prefix
+            service:
+              identifier: rustpad
+              port: http
+    tls:
+     - secretName: rustpad-ingress-secret
+       hosts:
+         - pad.cubieserver.de
+
+  cyberchef:
+    enabled: true
+    hosts:
+      - host: cyberchef.cubieserver.de
+        paths:
+          - path: /
+            pathType: Prefix
+            service:
+              identifier: cyberchef
+              port: http
+    tls:
+     - secretName: cyberchef-ingress-secret
+       hosts:
+         - cyberchef.cubieserver.de
+
+# mount an emptyDir to all containers in all controllers
+persistence:
+  tmp:
+    enabled: true
+    type: emptyDir
+    globalMounts:
+      - path: /tmp
+        readOnly: false 
