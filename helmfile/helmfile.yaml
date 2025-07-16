@@ -24,8 +24,9 @@ repositories:
    url: https://pajikos.github.io/home-assistant-helm-chart/
  - name: traefik
    url: https://helm.traefik.io/traefik
+   # https://github.com/bjw-s-labs/helm-charts
  - name: bjw-s
-   url: https://bjw-s.github.io/helm-charts
+   url: https://bjw-s-labs.github.io/helm-charts
  - name: jetstack
    url: https://charts.jetstack.io
  - name: db-operator
@@ -595,13 +596,16 @@ releases:
   labels:
     type: app
   chart: "jameswynn/homepage" # unofficial helm chart: https://github.com/jameswynn/helm-charts/tree/main/charts/homepage
-  version: 1.2.1
+  version: 2.1.0
   values:
     - image:
         # https://github.com/gethomepage/homepage/releases
         repository: ghcr.io/gethomepage/homepage
-        tag: v0.8.10
+        tag: v1.4.0
       enableRbac: true
+      env:
+        - name: HOMEPAGE_ALLOWED_HOSTS
+          value: www.cubieserver.de
       serviceAccount:
         create: true
       resources:
@@ -610,7 +614,7 @@ releases:
           cpu: 10m
         limits:
           memory: 250Mi
-          cpu: 200m
+          cpu: 250m
 
       securityContext:
         runAsUser: 1000
@@ -694,7 +698,7 @@ releases:
               - Jellyfin:
                   href: https://media.cubieserver.de
                   icon: jellyfin.png
-                  description: Media server
+                  description: Media server for movies and TV shows
                   namespace: jellyfin
                   app: jellyfin
               - Stirling PDF Tools:
