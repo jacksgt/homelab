@@ -661,6 +661,14 @@ releases:
 
           hideVersion: true
 
+          layout:
+            - "Web services":
+                style: row
+                columns: 2
+            - "Backend services":
+                style: row
+                columns: 2
+
         # https://gethomepage.dev/en/configs/bookmarks
         bookmarks:
           - Links:
@@ -670,9 +678,9 @@ releases:
             - "Homelab Git repository":
               - abbr: HL
                 href: https://git.cubieserver.de/cubieserver/homelab
-            - "Status Page":
-              - abbr: SP
-                href: https://status.cubieserver.de
+            # - "Status Page":
+            #   - abbr: SP
+            #     href: https://status.cubieserver.de
 
         # https://gethomepage.dev/en/configs/services
         # Icons from https://github.com/walkxcode/dashboard-icons are supported
@@ -722,7 +730,7 @@ releases:
                   app: redlib
               - Rustpad:
                   href: https://notepad.cubieserver.de
-                  icon: mdi-pencil
+                  icon: mdi-pencil-#ffffff
                   description: Collaborative online text editor
                   namespace: webtools
                   app: webtools
@@ -781,9 +789,6 @@ releases:
 
         # https://gethomepage.dev/en/configs/widgets
         widgets:
-          - logo:
-              icon: https://blog.cubieserver.de/images/wheel.jpg
-
           - greeting:
               text_size: 2xl
               text: "Jack's Homelab"
