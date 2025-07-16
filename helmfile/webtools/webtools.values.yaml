@@ -50,13 +50,13 @@ controllers:
                 port: 80
                 path: /
 
-        # resources:
-        #   requests:
-        #     cpu: 10m
-        #     memory: 50Mi
-        #   limits:
-        #     cpu: 100m
-        #     memory: 200Mi
+        resources:
+          requests:
+            cpu: 10m
+            memory: 20Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
 
         securityContext:
           readOnlyRootFilesystem: true
@@ -84,6 +84,10 @@ controllers:
           tag: latest
           pullPolicy: Always
 
+        # https://github.com/ekzhang/rustpad?tab=readme-ov-file#configuration
+        env:
+          EXPIRY_DAYS: "30"
+
         probes:
           liveness:
             enabled: false
@@ -99,13 +103,13 @@ controllers:
                 port: 3030
                 path: /
 
-        # resources:
-        #   requests:
-        #     cpu: 10m
-        #     memory: 50Mi
-        #   limits:
-        #     cpu: 100m
-        #     memory: 200Mi
+        resources:
+          requests:
+            cpu: 10m
+            memory: 20Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
 
         securityContext:
           readOnlyRootFilesystem: true
@@ -145,16 +149,16 @@ controllers:
               timeoutSeconds: 1
               failureThreshold: 3
               httpGet:
-                port: 8000
+                port: 80
                 path: /
 
-        # resources:
-        #   requests:
-        #     cpu: 10m
-        #     memory: 50Mi
-        #   limits:
-        #     cpu: 100m
-        #     memory: 200Mi
+        resources:
+          requests:
+            cpu: 10m
+            memory: 20Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
 
         securityContext:
           readOnlyRootFilesystem: true
@@ -167,7 +171,6 @@ controllers:
 
 serviceAccount:
   create: true
-
 
 service:
   it-tools:
@@ -203,7 +206,7 @@ service:
     ports:
       http:
         enabled: true
-        port: 8000
+        port: 80
         protocol: HTTP
 
 ingress:
@@ -225,7 +228,7 @@ ingress:
   rustpad:
     enabled: true
     hosts:
-      - host: pad.cubieserver.de
+      - host: notepad.cubieserver.de
         paths:
           - path: /
             pathType: Prefix
@@ -235,7 +238,7 @@ ingress:
     tls:
      - secretName: rustpad-ingress-secret
        hosts:
-         - pad.cubieserver.de
+         - notepad.cubieserver.de
 
   cyberchef:
     enabled: true
@@ -259,4 +262,33 @@ persistence:
     type: emptyDir
     globalMounts:
       - path: /tmp
-        readOnly: false 
+        readOnly: false
+        subPath: tmp
+      - path: /var/cache/nginx
+        subPath: var-cache-nginx
+        readOnly: false
+      - path: /var/run
+        subPath: var-run
+        readOnly: false
+
+  # tmp-it-tools:
+  #   enabled: true
+  #   type: emptyDir
+  #   advancedMounts:
+  #     it-tools: # the controller
+  #         it-tools: # the container
+  #           - path: /var/cache/nginx
+  #             readOnly: false
+  #           - path: /var/run
+  #             readOnly: false
+
+  # tmp-cyberchef:
+  #   enabled: true
+  #   type: emptyDir
+  #   advancedMounts:
+  #     cyberchef: # the controller
+  #         cyberchef: # the container
+  #           - path: /var/cache/nginx
+  #             readOnly: false
+  #           - path: /var/run
+  #             readOnly: false
