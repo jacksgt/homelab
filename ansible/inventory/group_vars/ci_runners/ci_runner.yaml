@@ -1,0 +1,18 @@
+---
+# Ansible config
+ansible_user: root
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+# Hetzner Cloud VM Configuration
+hcloud_token: "{{ lookup('env', 'HCLOUD_TOKEN') }}"
+ci_runner_vm_name: "ci-runner-1"
+ci_runner_vm_type: "cx22"  # 2 vCPU, 4GB RAM
+ci_runner_vm_location: "nbg1"  # Nuremberg
+ci_runner_vm_image: "centos-stream-10"
+ci_runner_ssh_key_name: "jhensche@jhensche-mac-2024-11-18"
+
+# CI Runner Configuration
+act_runner_image: "docker.gitea.com/act_runner:latest"
+ci_runner_user: "ci-runner"
+ci_runner_token: "{{ lookup('env', 'CI_RUNNER_TOKEN') }}"
+ci_runner_gitea_url: "https://git.cubieserver.de"

@@ -1,0 +1,2 @@
+# https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html
+ansible_python_interpreter: /usr/bin/python3

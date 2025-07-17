@@ -25,6 +25,11 @@ ansible-playbook playbooks/01_os.yml --limit $(hostname)
 
 # for a group of servers
 ansible-playbook playbooks/01_os.yml --limit debian
+
+# for setting up a Gitea Actions Runner on Hetzner Cloud:
+export HCLOUD_TOKEN=""
+export CI_RUNNER_TOKEN=""
+ansible-playbook playbooks/05_ci_runner.yml
 ```
 
 ## Secrets

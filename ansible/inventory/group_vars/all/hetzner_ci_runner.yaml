@@ -1,0 +1,14 @@
+---
+# Hetzner Cloud VM Configuration
+hcloud_token: "{{ lookup('env', 'HCLOUD_TOKEN') }}"
+ci_runner_vm_name: "ci-runner-1"
+ci_runner_vm_type: "cx22"  # 2 vCPU, 4GB RAM
+ci_runner_vm_location: "nbg1"  # Nuremberg
+ci_runner_vm_image: "centos-stream-10"
+ci_runner_ssh_key_name: "jhensche@jhensche-mac-2024-11-18"
+
+# CI Runner Configuration
+ci_runner_user: "ci-runner"
+ci_runner_token: "{{ lookup('env', 'CI_RUNNER_TOKEN') }}"
+ci_runner_gitea_url: "https://git.cubieserver.de"
+act_runner_image: "docker.io/gitea/act_runner:latest" 

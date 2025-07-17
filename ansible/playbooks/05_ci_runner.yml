@@ -1,0 +1,159 @@
+---
+- name: Create Hetzner Cloud VM for CI Runner
+  hosts: ci_runners
+  gather_facts: false
+  tasks:
+    - name: Create Hetzner Cloud server
+      delegate_to: localhost
+      hetzner.hcloud.server:
+        api_token: "{{ hcloud_token }}"
+        name: "{{ inventory_hostname }}"
+        server_type: "{{ ci_runner_vm_type }}"
+        image: "{{ ci_runner_vm_image }}"
+        location: "{{ ci_runner_vm_location }}"
+        ssh_keys:
+          - "{{ ci_runner_ssh_key_name }}"
+        user_data: |
+          #cloud-config
+          package_update: true
+          package_upgrade: true
+          packages:
+            - podman
+            - systemd-container
+        state: present
+      register: hcloud_server
+
+    - name: Wait for server to be reachable
+      delegate_to: localhost
+      ansible.builtin.wait_for:
+        host: "{{ hcloud_server.hcloud_server.ipv4_address }}"
+        port: 22
+        delay: 10
+        timeout: 300
+
+    - name: Set host IP in inventory
+      ansible.builtin.set_fact:
+        ansible_host: "{{ hcloud_server.hcloud_server.ipv4_address }}"
+
+- name: Configure CI Runner on Hetzner VM
+  hosts: ci_runners
+  gather_facts: true
+  tasks:
+    - name: Ensure required packages are installed
+      ansible.builtin.dnf:
+        name:
+          - podman
+          - systemd-container
+        state: present
+
+    - name: Create ci-runner user
+      ansible.builtin.user:
+        name: "{{ ci_runner_user }}"
+        system: true
+        shell: /bin/bash
+        home: "/home/{{ ci_runner_user }}"
+        create_home: true
+      register: ci_runner_user_created
+
+    - name: Set sub-UID/GID ranges for ci-runner user
+      ansible.builtin.command:
+        cmd: "usermod --add-subuids 100000-165535 --add-subgids 100000-165535 {{ ci_runner_user }}"
+      changed_when: true
+
+    - name: Enable lingering for ci-runner user
+      ansible.builtin.command:
+        cmd: "loginctl enable-linger {{ ci_runner_user }}"
+      changed_when: true
+
+    - name: Enable and start Podman socket for ci-runner user
+      ansible.builtin.shell: |
+        systemctl --user enable --now podman.socket
+      become: true
+      become_user: "{{ ci_runner_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ci_runner_user_created.uid }}"
+
+    - name: Create systemd user directory for ci-runner
+      ansible.builtin.file:
+        path: "/home/{{ ci_runner_user }}/.config/systemd/user"
+        state: directory
+        owner: "{{ ci_runner_user }}"
+        group: "{{ ci_runner_user }}"
+        mode: '0755'
+
+    - name: Create containers directory for ci-runner
+      ansible.builtin.file:
+        path: "/home/{{ ci_runner_user }}/.config/containers/systemd"
+        state: directory
+        owner: "{{ ci_runner_user }}"
+        group: "{{ ci_runner_user }}"
+        mode: '0755'
+
+    - name: Create act-runner data directory
+      ansible.builtin.file:
+        path: "/home/{{ ci_runner_user }}/act-runner-data"
+        state: directory
+        owner: "{{ ci_runner_user }}"
+        group: "{{ ci_runner_user }}"
+        mode: '0755'
+
+    - name: Create act-runner systemd quadlet unit
+      ansible.builtin.copy:
+        dest: "/home/{{ ci_runner_user }}/.config/containers/systemd/act-runner.container"
+        owner: "{{ ci_runner_user }}"
+        group: "{{ ci_runner_user }}"
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Gitea Act Runner
+          Wants=network-online.target
+          After=network-online.target
+          RequiresMountsFor=%t/containers
+
+          [Container]
+          Image={{ act_runner_image }}
+          ContainerName=act-runner
+          AutoUpdate=registry
+          
+          # Mount data directory
+          Volume=/home/{{ ci_runner_user }}/act-runner-data:/data:Z
+          
+          # Mount Podman socket for running containers
+          Volume=%t/podman/podman.sock:/var/run/docker.sock:Z
+          
+          # Environment variables
+          Environment=GITEA_INSTANCE_URL={{ ci_runner_gitea_url }}
+          Environment=GITEA_RUNNER_REGISTRATION_TOKEN={{ ci_runner_token }}
+          Environment=GITEA_RUNNER_NAME={{ inventory_hostname }}
+          
+          [Service]
+          Restart=always
+          RestartSec=10
+
+          [Install]
+          WantedBy=default.target
+
+    - name: Reload systemd daemon for ci-runner user
+      ansible.builtin.shell: |
+        systemctl --user daemon-reload
+      become: true
+      become_user: "{{ ci_runner_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ci_runner_user_created.uid }}"
+
+    - name: Enable and start act-runner service
+      ansible.builtin.systemd:
+        name: act-runner
+        enabled: true
+        state: started
+        scope: user
+      become: true
+      become_user: "{{ ci_runner_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ci_runner_user_created.uid }}"
+
+    - name: Display server information
+      ansible.builtin.debug:
+        msg:
+          - "Hetzner Cloud VM '{{ inventory_hostname }}' ({{ ansible_host }}) created successfully!"
+          - "Act Runner service status: Started and enabled"
