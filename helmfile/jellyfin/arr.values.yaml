@@ -517,7 +517,7 @@ controllers:
         image:
           # https://github.com/alexta69/metube/pkgs/container/metube
           repository: ghcr.io/alexta69/metube
-          tag: 2025-02-20
+          tag: 2025-07-27
           pullPolicy: IfNotPresent
 
         env:
