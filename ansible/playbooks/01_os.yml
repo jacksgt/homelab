@@ -38,9 +38,11 @@
           - ansible
           - ansible-language-server
           - age # for file encryption
+          - bluesnooze # disables Bluetooth when Mac is sleeping
           - crane # container images
           - curl
           - editorconfig # for Emacs
+          - exiftool # extract and modify picture metadata
           - fish
           - font-hack # for Emacs
           - git
@@ -48,6 +50,7 @@
           - gopls
           - gron # flatten JSON to make it greppable
           - helm
+          - jdupes # file duplicate finder
           - ispell # for Emacs
           - kopia
           - kubectl
@@ -72,6 +75,7 @@
           - emacs
           - maccy # clipboard manager
           - nextcloud
+          - triliumnext-notes
           - podman-desktop
           - vlc
 
