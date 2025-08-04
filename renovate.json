@@ -1,0 +1,12 @@
+{
+  // https://docs.renovatebot.com/configuration-options/
+  "extends": [
+    "config:base"
+  ],
+  "packageRules": [
+    {
+      "updateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    }
+  ]
+}
