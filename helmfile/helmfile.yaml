@@ -84,7 +84,7 @@ releases:
   labels:
     type: platform
   secrets:
-    - ./environments/{{ .Environment.Name }}/mariadb-values.secret.yaml
+    - "./environments/{{ .Environment.Name }}/mariadb-values.secret.yaml"
   # https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
   values:
     - image:
@@ -155,13 +155,13 @@ releases:
           sslConnection:
             enabled: false
 
-- name: kub-vol-bak
-  chart: ./kub-vol-bak
-  namespace: kub-vol-bak
-  createNamespace: true
-  condition: backup.enabled
-  secrets:
-    - ./environments/{{ .Environment.Name }}/kub-vol-bak.secret.yaml
+# - name: kub-vol-bak
+#   chart: ./kub-vol-bak
+#   namespace: kub-vol-bak
+#   createNamespace: true
+#   condition: backup.enabled
+#   secrets:
+#     - "./environments/{{ .Environment.Name }}/kub-vol-bak.secret.yaml"
 
 # helm upgrade --install kube-prometheus-stack -n monitoring -f monitoring/kube-prometheus-stack.values.yaml prometheus-community/kube-prometheus-stack
 - name: kube-prometheus-stack
@@ -376,10 +376,10 @@ releases:
         instance: mariadb-instance-prod
         secretName: gitea-db-credentials
         secretsTemplates:
-          host: {{`'{{ .DatabaseHost }}:{{ .DatabasePort }}'`}}
-          name: '{{`{{ .DatabaseName }}'`}}
-          password: {{`'{{ .Password }}'`}}
-          user: {{`'{{ .UserName }}'`}}
+          host: "{{`'{{ .DatabaseHost }}:{{ .DatabasePort }}'`}}"
+          name: "{{`'{{ .DatabaseName }}'`}}"
+          password: "{{`'{{ .Password }}'`}}"
+          user: "{{`'{{ .UserName }}'`}}"
 
 - name: gitea
   namespace: gitea
@@ -392,11 +392,13 @@ releases:
   chart: "gitea/gitea"
   version: "10.5.0"
   secrets:
-    - ./environments/{{ .Environment.Name }}/gitea-values.secret.yaml
+    - "./environments/{{ .Environment.Name }}/gitea-values.secret.yaml"
   # https://gitea.com/gitea/helm-chart/src/branch/main/values.yaml
   values:
   - image:
       # https://github.com/go-gitea/gitea/tags
+      # Note that 1.22.x is the last version that supports migration to Forgejo, so let's stay there for now
+      # https://forgejo.org/2024-12-gitea-compatibility/
       tag: "1.22.6"
       pullPolicy: IfNotPresent
       rootless: true
@@ -820,7 +822,7 @@ releases:
   chart: bitnamicharts-oci/postgresql
   version: 13.2.9
   secrets:
-    - ./environments/{{ .Environment.Name }}/postgres-values.secret.yaml
+    - "./environments/{{ .Environment.Name }}/postgres-values.secret.yaml"
   # https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
   values:
     - fullnameOverride: "postgres"
@@ -865,7 +867,7 @@ releases:
   chart: authentik/authentik
   version: "2024.12.3"
   secrets:
-    - ./environments/{{ .Environment.Name }}/authentik-values.secret.yaml
+    - "./environments/{{ .Environment.Name }}/authentik-values.secret.yaml"
   # https://github.com/goauthentik/helm/blob/main/charts/authentik/values.yaml
   values:
     - authentik:
@@ -970,11 +972,11 @@ releases:
         secretName: authentik-db-credentials
         secretsTemplates:
           # https://goauthentik.io/docs/installation/configuration#postgresql-settings
-          AUTHENTIK_POSTGRESQL__HOST: {{` "{{ .DatabaseHost }}" `}}
-          AUTHENTIK_POSTGRESQL__NAME: {{` "{{ .DatabaseName }}" `}}
-          AUTHENTIK_POSTGRESQL__USER: {{` "{{ .UserName }}" `}}
-          AUTHENTIK_POSTGRESQL__PORT: {{` "{{ .DatabasePort }}" `}}
-          AUTHENTIK_POSTGRESQL__PASSWORD: {{` "{{ .Password }}" `}}
+          AUTHENTIK_POSTGRESQL__HOST: '{{` "{{ .DatabaseHost }}" `}}'
+          AUTHENTIK_POSTGRESQL__NAME: '{{` "{{ .DatabaseName }}" `}}'
+          AUTHENTIK_POSTGRESQL__USER: '{{` "{{ .UserName }}" `}}'
+          AUTHENTIK_POSTGRESQL__PORT: '{{` "{{ .DatabasePort }}" `}}'
+          AUTHENTIK_POSTGRESQL__PASSWORD: '{{` "{{ .Password }}" `}}'
           AUTHENTIK_POSTGRESQL__USE_PGBOUNCER: "false"
 
 - name: nextcloud
@@ -986,7 +988,7 @@ releases:
   chart: nextcloud/nextcloud
   version: 6.6.4
   secrets:
-    - ./environments/{{ .Environment.Name }}/nextcloud-values.secret.yaml
+    - "./environments/{{ .Environment.Name }}/nextcloud-values.secret.yaml"
   # https://github.com/nextcloud/helm/blob/main/charts/nextcloud/values.yaml
   values:
   - image:
@@ -1151,17 +1153,19 @@ releases:
   createNamespace: true
   labels:
     type: app
-  chart: frooodle/stirling-pdf-chart
-  version: 1.0.0
-  # https://github.com/stirling-tools/Stirling-PDF/blob/main/chart/stirling-pdf/values.yaml
+  chart: stirling-tools/stirling-pdf-chart
+  version: 1.5.0
+  # https://github.com/Stirling-Tools/Stirling-PDF-chart/blob/main/charts/stirling-pdf/values.yaml
   # https://www.stirlingtools.com/docs/Advanced%20Configuration/How%20to%20add%20configurations
   values:
   - fullnameOverride: "stirling-pdf" # override default name "stirling-pdf-stirling-pdf-chart"
     image:
       # https://github.com/stirling-tools/Stirling-PDF/releases
       # https://github.com/Stirling-Tools/Stirling-PDF/pkgs/container/s-pdf
-      repository: "ghcr.io/stirling-tools/s-pdf"
-      tag: "0.20.1"
+      registry: "ghcr.io"
+      repository: "stirling-tools/s-pdf"
+      # note that 0.42.0 currently does not work: k get pod -A | grep -v -e Running -e Completed
+      tag: "0.41.0"
 
     envs:
       - name: UI_APP_NAME
@@ -1357,7 +1361,7 @@ releases:
   chart: ./local_charts/martialblog-helm-charts/ejabberd/
   # version: "0.2.0"
   secrets:
-    - ./environments/{{ .Environment.Name }}/ejabberd-values.secret.yaml
+    - "./environments/{{ .Environment.Name }}/ejabberd-values.secret.yaml"
   values:
     - image:
         # https://github.com/processone/ejabberd/releases
