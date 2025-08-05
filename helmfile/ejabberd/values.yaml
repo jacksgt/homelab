@@ -1,0 +1,32 @@
+image:
+  # https://github.com/processone/ejabberd/releases
+  # https://github.com/processone/ejabberd/pkgs/container/ejabberd
+  repository: ghcr.io/processone/ejabberd
+  tag: 23.01@sha256:163b9d9ccb2edd2c70863712b75ef360f0f5cb35f4c0f8027b74f6c58e1160a9
+
+# no persistence for the moment (empytDir only)
+# the container gets restarted rarely enough that this is not a problem
+persistence:
+  enabled: false
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 250Mi
+  requests:
+    cpu: 10m
+    memory: 60Mi
+
+service:
+  type: LoadBalancer
+
+# Allow access to MariaDB server
+podLabels:
+  networkpolicy-mariadb-access: "enabled"
+
+certificate:
+  create: true
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-production

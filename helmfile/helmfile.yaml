@@ -1,6 +1,3 @@
-# helm plugin install https://github.com/databus23/helm-diff
-# helm plugin install https://github.com/jkroepke/helm-secrets --version v4.5.1
-
 repositories:
  - name: prometheus-community
    url: https://prometheus-community.github.io/helm-charts
@@ -30,6 +27,8 @@ repositories:
    url: https://charts.jetstack.io
  - name: db-operator
    url: https://db-operator.github.io/charts
+ - name: jellyfin
+   url: https://jellyfin.github.io/jellyfin-helm
 
   # - name: myOCIRegistry
   #   url: myregistry.azurecr.io
@@ -37,32 +36,13 @@ repositories:
 
 ---
 
-environments:
-  default:
-    values:
-      - storage:
-          enabled: false
-        backup:
-          enabled: false
-        mariadb:
-          enabled: false
-  cubieserver:
-    values:
-      - storage:
-          enabled: true
-        backup:
-          enabled: true
-        mariadb:
-          enabled: true
-          # use XFS partition instead of btrfs
-          # Due to the Copy-on-Write concept, btrfs volumes are not well suited for workloads
-          # that frequently update their own files, e.g. databases.
-          # While CoW can be manually disabled for specific file and directories, this introduces
-          # additional operational overhead.
-          # https://wiki.archlinux.org/title/Btrfs#Disabling_CoW
-          # Thus, the production system has a separate xfs partition
-          storageclass: "local-path-xfs"
----
+# for database-like workloads, use XFS partition instead of btrfs
+# Due to the Copy-on-Write concept, btrfs volumes are not well suited for workloads
+# that frequently update their own files, e.g. databases.
+# While CoW can be manually disabled for specific file and directories, this introduces
+# additional operational overhead.
+# https://wiki.archlinux.org/title/Btrfs#Disabling_CoW
+# Thus, the production system has a separate xfs partition
 
 helmDefaults:
   historyMax: 3
@@ -73,7 +53,6 @@ releases:
 - name: storage
   chart: ./storage
   namespace: kube-system
-  condition: storage.enabled
 
 # TODO: also manage backup cronjob with Helmfile
 - name: mariadb
@@ -84,76 +63,9 @@ releases:
   labels:
     type: platform
   secrets:
-    - "./environments/{{ .Environment.Name }}/mariadb-values.secret.yaml"
-  # https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
+    - ./mariadb/mariadb-values.secret.yaml
   values:
-    - image:
-        # https://hub.docker.com/r/bitnami/mariadb/tags
-        tag: "11.4.4"
-        # IMPORTANT: check Nextcloud supported versions!
-        # https://docs.nextcloud.com/server/latest/admin_manual/installation/system_requirements.html
-      auth:
-        # "rootPassword" set in secret values.yaml
-      # sleep infinity + disable health probes
-      # diagnosticMode:
-      #   enabled: true
-      primary:
-        service:
-          type: ClusterIP
-        persistence:
-          storageClass: local-path-xfs
-          size: "1"
-          annotations:
-            # backups are handled with mysqldump for consistency
-            # (which is not guaranteed with filesystem-level backups)
-            backup-enabled: "false"
-
-        # customize resource allocations
-        resourcesPresets: none
-        resources:
-          requests:
-            cpu: 250m
-            memory: 250Mi
-          limits:
-            cpu: 1
-            memory: 1Gi
-
-        # Do not create a PodDisruptionBudget
-        pdb:
-          create: false
-
-      networkPolicy:
-        enabled: true
-        # do not allow outgoing connections (except cluster services, DNS etc.)
-        allowExternalEgress: false
-        # deny all ingress except matching pods
-        # disable the value below for debugging
-        allowExternal: false
-        ingressNSPodMatchLabels:
-          networkpolicy-mariadb-access: "enabled"
-        # Unfortunately it is not easy to manage Namespace labels with Helm, therefore these labels have to be added manually to the relevant namespace.
-        ingressNSMatchLabels:
-          networkpolicy-mariadb-access: "enabled"
-
-      extraDeploy:
-      - apiVersion: kinda.rocks/v1beta1
-        kind: DbInstance
-        metadata:
-          name: mariadb-instance-prod
-          # cluster-wide resource, no namespace
-        spec:
-          adminSecretRef:
-            # TODO: this secret should be managed by Helm as well
-            Name: mariadb-admin-secret-for-db-instance
-            Namespace: mariadb
-          engine: mysql
-          generic:
-            host: mariadb.mariadb.svc.cluster.local
-            port: 3306
-          monitoring:
-            enabled: false
-          sslConnection:
-            enabled: false
+    - ./mariadb/values.yaml
 
 # - name: kub-vol-bak
 #   chart: ./kub-vol-bak
@@ -171,7 +83,6 @@ releases:
     type: platform
   version: 45.25.0
   chart: prometheus-community/kube-prometheus-stack
-  # https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
   values:
   - monitoring/kube-prometheus-stack.values.yaml
 
@@ -209,108 +120,7 @@ releases:
   chart: jetstack/cert-manager
   version: v1.17.1
   values:
-    - crds:
-        enabled: true
-        keep: true
-      ### Options for cert-manager controller
-      config:
-        numberOfConcurrentWorkers: 1
-        enableGatewayAPI: false # could be useful in the future, but requires Gateway API CRDs to be present
-      extraArgs:
-        # disable leader election because we only run a single replicas and it consumes resources
-        - --leader-elect=false
-      prometheus:
-        enabled: false
-      containerSecurityContext:
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop:
-          - ALL
-        readOnlyRootFilesystem: true
-        runAsNonRoot: true
-      resources:
-        limits:
-          memory: 100Mi
-        requests:
-          memory: 40Mi
-      strategy:
-        type: Recreate
-
-      ### Disable optional startupapicheck Job
-      startupapicheck:
-        enabled: false
-
-      ### Configure cainjector component
-      cainjector:
-        strategy:
-          type: Recreate
-        extraArgs:
-          # disable leader election because we only run a single replicas and it consumes resources
-          - --leader-elect=false
-        resources:
-          limits:
-            memory: 100Mi
-          requests:
-            memory: 40Mi
-
-      ### Configure webhook component
-      webhook:
-        resources:
-          limits:
-            memory: 100Mi
-          requests:
-            memory: 20Mi
-
-      ### Configure cluster-scoped issuers that can be used by any application
-      # https://cert-manager.io/docs/configuration/acme/
-      extraObjects:
-      - |
-          apiVersion: cert-manager.io/v1
-          kind: ClusterIssuer
-          metadata:
-            name: selfsigned
-          spec:
-            selfSigned: {}
-      - |
-          apiVersion: cert-manager.io/v1
-          kind: ClusterIssuer
-          metadata:
-            name: letsencrypt-staging
-          spec:
-            acme:
-              email: admin@cubieserver.de
-              preferredChain: ""
-              privateKeySecretRef:
-                name: letsencrypt-staging-account-key
-              server: https://acme-staging-v02.api.letsencrypt.org/directory
-              solvers:
-              - http01:
-                  ingress:
-                    ingressTemplate:
-                      metadata:
-                        annotations:
-                          kubernetes.io/ingress.class: "" # default ingress controller
-                          traefik.ingress.kubernetes.io/router.priority: "100"
-
-      - |
-          apiVersion: cert-manager.io/v1
-          kind: ClusterIssuer
-          metadata:
-            name: letsencrypt-production
-          spec:
-            acme:
-              email: admin@cubieserver.de
-              server: https://acme-v02.api.letsencrypt.org/directory
-              privateKeySecretRef:
-                name: letsencrypt-production-account-key
-              solvers:
-              - http01:
-                 ingress:
-                   ingressTemplate:
-                     metadata:
-                       annotations:
-                         kubernetes.io/ingress.class: "" # default ingress controller
-                         traefik.ingress.kubernetes.io/router.priority: "100"
+    - ./cert-manager/values.yaml
 
 - name: db-operator
   namespace: db-operator
@@ -319,42 +129,7 @@ releases:
   chart: db-operator/db-operator
   version: 1.30.0
   values:
-    - crds:
-        install: true
-        keep: true
-      # https://github.com/db-operator/db-operator/releases
-      # https://github.com/db-operator/db-operator/pkgs/container/db-operator
-      image:
-        repository: ghcr.io/db-operator/db-operator
-        tag: 2.10.0
-        pullPolicy: IfNotPresent
-        logLevel: info
-      # "" means watch resources in all namespaces
-      watchNamespace: ""
-      podSecurityContext:
-        fsGroup: 1000
-        runAsUser: 1000
-        runAsNonRoot: true
-      resources:
-        requests:
-          cpu: 10m
-          memory: 20Mi
-        limits:
-          cpu: 100m
-          memory: 100Mi
-      # Allow access to database servers
-      # This label needs to be added to the namespace as well
-      podLabels:
-        networkpolicy-mariadb-access: "enabled"
-      serviceMonitor:
-        enabled: false
-      webhook:
-        certificate:
-          create: true
-          issuer:
-            create: false
-            kind: ClusterIssuer
-            name: selfsigned
+    - ./db-operator/values.yaml
 
 # Note: we cannot use the `extraDeploy` value of the Gitea Helm chart for this resource,
 # because the Gitea Helm chart runs a Helm template over the value, which means we loose the
@@ -366,20 +141,7 @@ releases:
   chart: incubator/raw
   version: 0.2.5
   values:
-  - resources:
-    - apiVersion: kci.rocks/v1beta1
-      kind: Database
-      metadata:
-        name: gitea
-      spec:
-        deletionProtected: true
-        instance: mariadb-instance-prod
-        secretName: gitea-db-credentials
-        secretsTemplates:
-          host: "{{`'{{ .DatabaseHost }}:{{ .DatabasePort }}'`}}"
-          name: "{{`'{{ .DatabaseName }}'`}}"
-          password: "{{`'{{ .Password }}'`}}"
-          user: "{{`'{{ .UserName }}'`}}"
+    - ./gitea-extras/values.yaml
 
 - name: gitea
   namespace: gitea
@@ -389,208 +151,21 @@ releases:
   # https://gitea.com/gitea/helm-chart
   # https://gitea.com/gitea/helm-chart#upgrading
   # https://gitea.com/gitea/helm-chart/releases
-  chart: "gitea/gitea"
-  version: "10.5.0"
+  chart: gitea/gitea
+  version: 10.5.0
   secrets:
-    - "./environments/{{ .Environment.Name }}/gitea-values.secret.yaml"
-  # https://gitea.com/gitea/helm-chart/src/branch/main/values.yaml
+    - gitea/gitea-values.secret.yaml
   values:
-  - image:
-      # https://github.com/go-gitea/gitea/tags
-      # Note that 1.22.x is the last version that supports migration to Forgejo, so let's stay there for now
-      # https://forgejo.org/2024-12-gitea-compatibility/
-      tag: "1.22.6"
-      pullPolicy: IfNotPresent
-      rootless: true
-    # Allow access to MariaDB server
-    # These labels will be propagated to the Deployment as well as the Pods
-    deployment:
-      labels:
-        networkpolicy-mariadb-access: "enabled"
-    gitea:
-      # set in gitea-values.secret.yaml
-      # admin:
-      #   username:
-      #   password:
-      #   email:
-
-      # Gitea configuration, aka. gitea.ini
-      # https://docs.gitea.io/en-us/config-cheat-sheet/
-      config:
-        APP_NAME: 'Gitea: Git@Cubieserver'
-        server:
-          SSH_PORT: 2222
-          DOMAIN: "" # set in secret values
-          OFFLINE_MODE: true
-          LANDING_PAGE: "explore"
-        actions:
-          ENABLED: true # as of v1.20, Gitea Actions are disabled by default
-        service:
-          # only OAuth2/OIDC login is allowed
-          DISABLE_REGISTRATION: true
-          # users should register themselves with the IDP, not in Gitea
-          SHOW_REGISTRATION_BUTTON: false
-        # https://docs.gitea.com/next/administration/logging-config
-        log:
-          LEVEL: "Info" # Trace, Debug, Info, Warn, Error, Critical, Fatal, None
-        # since v9 of the Helm chart "HA" mode is enabled by default
-        # the following settings switch back to standalone mode, see:
-        # https://gitea.com/gitea/helm-chart#single-pod-configurations
-        # https://gitea.com/gitea/helm-chart/issues/524
-        session:
-          PROVIDER: db
-        cache:
-          ADAPTER: twoqueue
-        queue:
-          TYPE: level
-        indexer:
-          ISSUE_INDEXER_TYPE: bleve
-          REPO_INDEXER_ENABLED: true
-
-      # https://docs.gitea.io/en-us/administration/config-cheat-sheet/#database-database
-      additionalConfigFromEnvs:
-        # Secret "gitea-db-credentials" is created from gitea-extras chart
-        - name: GITEA__DATABASE__DB_TYPE
-          value: "mysql"
-        - name: GITEA__DATABASE__LOG_SQL
-          value: "false"
-        - name: GITEA__DATABASE__HOST
-          valueFrom:
-            secretKeyRef:
-              name: gitea-db-credentials
-              key: host
-        - name: GITEA__DATABASE__NAME
-          valueFrom:
-            secretKeyRef:
-              name: gitea-db-credentials
-              key: name
-        - name: GITEA__DATABASE__USER
-          valueFrom:
-            secretKeyRef:
-              name: gitea-db-credentials
-              key: user
-        - name: GITEA__DATABASE__PASSWD
-          valueFrom:
-            secretKeyRef:
-              name: gitea-db-credentials
-              key: password
-
-    # https://docs.gitea.com/administration/customizing-gitea
-    extraVolumes:
-      - name: custom-gitea-config
-        configMap:
-          name: custom-gitea-config
-    extraContainerVolumeMounts:
-      - name: custom-gitea-config
-        mountPath: /data/gitea/public/robots.txt
-        subPath: robots.txt
-        readOnly: true
-
-    persistence:
-      enabled: true
-      storageClass: "local-path-btrfs"
-      size: 1
-
-    strategy:
-      type: Recreate
-
-    resources:
-      requests:
-        memory: 128Mi
-        cpu: 50m
-      limits:
-        memory: 512Mi
-
-    service:
-      ssh:
-        port: 2222 # see SSH_PORT above
-
-    ingress:
-      enabled: true
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-production
-        traefik.ingress.kubernetes.io/router.entrypoints: websecure
-
-      # set in gitea-values.secret.yaml
-      # hosts:
-      # tls:
-
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-      privileged: false
-      readOnlyRootFilesystem: true
-      runAsGroup: 1000
-      runAsUser: 1000
-
-    podSecurityContext:
-      fsGroup: 1000
-      runAsNonRoot: true
-
-    # disabled unwanted dependencies
-    memcached:
-      enabled: false
-    postgresql:
-      enabled: false
-    postgresql-ha:
-      enabled: false
-    redis-cluster:
-      enabled: false
-    test:
-      enabled: false
-
-    # additional resources
-    extraDeploy:
-    - apiVersion: v1
-      kind: ConfigMap
-      metadata:
-        name: custom-gitea-config
-      data:
-        # Disallow bots from crawling (causes lots of traffic)
-        # https://docs.gitea.com/administration/search-engines-indexation
-        robots.txt: |
-          User-agent: *
-          Disallow: /
+    - gitea/values.yaml
 
 - name: s3-website-gateway
   namespace: static-websites
   createNamespace: true
   labels:
     type: app
-  chart: "./local_charts/s3-website-gateway/"
+  chart: ./s3-website-gateway/chart/
   values:
-    - image:
-        tag: "1.25"
-      ingress:
-        annotations:
-          cert-manager.io/cluster-issuer: letsencrypt-production
-          traefik.ingress.kubernetes.io/router.entrypoints: websecure
-      resources:
-        limits:
-          cpu: 1
-          memory: 128Mi
-        requests:
-          cpu: 100m
-          memory: 64Mi
-      websites:
-      - name: www-old
-        bucket: www-cubieserver-de
-        endpoint: http://minio.minio.svc.cluster.local.:9000
-        hostname: www-old.cubieserver.de
-      - name: jacks-blog
-        bucket: blog-cubieserver-de
-        endpoint: http://minio.minio.svc.cluster.local.:9000
-        hostname: blog.cubieserver.de
-      - name: jacks-blog-test
-        bucket: blog-cubieserver-de-test
-        endpoint: http://minio.minio.svc.cluster.local.:9000
-        hostname: test-blog.cubieserver.de
-      - name: adeles-blog
-        bucket: adele
-        endpoint: http://minio.minio.svc.cluster.local.:9000
-        hostname: adeles.cooking
+    - s3-website-gateway/cubieserver.yaml
 
   # Deploys an instance of https://github.com/gethomepage/homepage (https://github.com/gethomepage/homepage)
 - name: homepage
@@ -598,220 +173,10 @@ releases:
   createNamespace: true
   labels:
     type: app
-  chart: "jameswynn/homepage" # unofficial helm chart: https://github.com/jameswynn/helm-charts/tree/main/charts/homepage
+  chart: jameswynn/homepage # unofficial helm chart: https://github.com/jameswynn/helm-charts/tree/main/charts/homepage
   version: 2.1.0
   values:
-    - image:
-        # https://github.com/gethomepage/homepage/releases
-        repository: ghcr.io/gethomepage/homepage
-        tag: v1.4.0
-      enableRbac: true
-      env:
-        - name: HOMEPAGE_ALLOWED_HOSTS
-          value: www.cubieserver.de
-      serviceAccount:
-        create: true
-      resources:
-        requests:
-          memory: 100Mi
-          cpu: 10m
-        limits:
-          memory: 250Mi
-          cpu: 250m
-
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: true
-        capabilities: { drop: ["ALL"] }
-
-      ingress:
-        main:
-          enabled: true
-          annotations:
-            cert-manager.io/cluster-issuer: letsencrypt-production
-            traefik.ingress.kubernetes.io/router.entrypoints: websecure
-          hosts:
-          - host: www.cubieserver.de
-            paths:
-            - path: /
-              pathType: Prefix
-          tls:
-          - hosts:
-            - www.cubieserver.de
-            secretName: homepage-ingress-secret
-
-
-      # config files passed to homepage application
-      # https://gethomepage.dev/en/configs/services/
-      config:
-        # https://gethomepage.dev/en/configs/kubernetes/
-        kubernetes:
-          mode: cluster # use serviceaccount from container
-
-        # https://gethomepage.dev/en/configs/settings
-        settings:
-          title: "Cubieserver.de - Jack's Homelab"
-
-          # https://unsplash.com/photos/XKEObIMh0V0
-          background: "https://images.unsplash.com/photo-1506781994843-d2c500b1dde1?auto=format&fit=crop&w=2560&q=80"
-          backgroundOpacity: 0.4
-          color: zinc
-
-          headerStyle: boxed
-
-          hideVersion: true
-
-          layout:
-            - "Web services":
-                style: row
-                columns: 2
-            - "Backend services":
-                style: row
-                columns: 2
-
-        # https://gethomepage.dev/en/configs/bookmarks
-        bookmarks:
-          - Links:
-            - "Jack's Blog":
-              - abbr: JH
-                href: https://blog.cubieserver.de
-            - "Homelab Git repository":
-              - abbr: HL
-                href: https://git.cubieserver.de/cubieserver/homelab
-            # - "Status Page":
-            #   - abbr: SP
-            #     href: https://status.cubieserver.de
-
-        # https://gethomepage.dev/en/configs/services
-        # Icons from https://github.com/walkxcode/dashboard-icons are supported
-        services:
-          - "Web services":
-              - Nextcloud:
-                  href: https://cloud.cubieserver.de
-                  icon: nextcloud.png
-                  description: Platform for online file sharing, pictures, contacts, calendar and more
-                  namespace: nextcloud
-                  app: nextcloud
-              - Authentik:
-                  href: https://auth.cubieserver.de
-                  icon: authentik.png
-                  description: Account management & Authentication
-                  namespace: authentik
-                  app: authentik
-              - Gitea:
-                  href: https://git.cubieserver.de
-                  icon: gitea.png
-                  description: Git repository service
-                  namespace: gitea
-                  app: gitea
-              - Jellyfin:
-                  href: https://media.cubieserver.de
-                  icon: jellyfin.png
-                  description: Media server for movies and TV shows
-                  namespace: jellyfin
-                  app: jellyfin
-              - Stirling PDF Tools:
-                  href: https://pdftools.cubieserver.de
-                  icon: https://raw.githubusercontent.com/Frooodle/Stirling-PDF/main/docs/stirling.png
-                  description: Online editor for PDF documents
-                  namespace: stirling-pdf
-                  app: stirling-pdf-chart
-              - U9K:
-                  href: https://u9k.de
-                  icon: https://u9k.de/static/icons/favicon-180x180.png
-                  description: Short URL and file sharing service
-                  namespace: u9k
-                  app: u9k
-              - Redlib:
-                  href: https://reddit.cubieserver.de
-                  icon: https://raw.githubusercontent.com/redlib-org/redlib/refs/heads/main/static/logo.png
-                  description: Alternative frontend for Reddit
-                  namespace: reddit
-                  app: redlib
-              - Rustpad:
-                  href: https://notepad.cubieserver.de
-                  icon: mdi-pencil-#ffffff
-                  description: Collaborative online text editor
-                  namespace: webtools
-                  app: webtools
-                  podSelector: >-
-                    app.kubernetes.io/component in (rustpad)
-              - IT-Tools:
-                  href: https://it-tools.cubieserver.de
-                  icon: https://raw.githubusercontent.com/CorentinTh/it-tools/refs/heads/main/public/android-chrome-192x192.png
-                  description: Useful web tools for developer and people working in IT
-                  namespace: webtools
-                  app: webtools
-                  podSelector: >-
-                    app.kubernetes.io/component in (it-tools)
-              - CyberChef:
-                  href: https://cyberchef.cubieserver.de
-                  icon: https://raw.githubusercontent.com/gchq/CyberChef/refs/heads/master/src/web/static/images/logo/cyberchef_hat_512.png
-                  description: Web app for encryption, encoding, compression and data analysis
-                  namespace: webtools
-                  app: webtools
-                  podSelector: >-
-                    app.kubernetes.io/component in (cyberchef)
-
-
-          - "Backend services":
-              - ejabberd:
-                  icon: mdi-xmpp
-                  description: XMPP messaging server
-                  namespace: ejabberd
-                  app: ejabberd
-              - Minio:
-                  href: https://console-s3.cubieserver.de
-                  icon: minio.png
-                  description: S3 blob storage
-                  namespace: minio
-                  app: minio
-              - Traefik:
-                  icon: traefik.png
-                  description: HTTP proxy and router
-                  namespace: traefik
-                  app: traefik
-              - PostgreSQL:
-                  icon: postgres.png
-                  description: Postgres relational database
-                  namespace: postgres
-                  app: postgresql
-              - MariaDB:
-                  icon: mariadb.png
-                  description: MySQL-compatible SQL database
-                  namespace: mariadb
-                  app: mariadb
-              - k3s:
-                  icon: https://k3s.io/img/k3s-logo-light.svg
-                  description: Kubernetes cluster
-
-
-
-        # https://gethomepage.dev/en/configs/widgets
-        widgets:
-          - greeting:
-              text_size: 2xl
-              text: "Jack's Homelab"
-
-          - search:
-              provider: duckduckgo
-              target: _self
-
-          # show the kubernetes widget, with the cluster summary and individual nodes
-          - kubernetes:
-              cluster:
-                show: true
-                cpu: true
-                memory: true
-                showLabel: false
-                label: "cluster"
-              nodes:
-                show: false
-                cpu: false
-                memory: false
-                showLabel: false
+    - homepage/values.yaml
 
 # TODO: also manage backup cronjob with Helmfile
 - name: postgres
@@ -822,38 +187,9 @@ releases:
   chart: bitnamicharts-oci/postgresql
   version: 13.2.9
   secrets:
-    - "./environments/{{ .Environment.Name }}/postgres-values.secret.yaml"
-  # https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
+    - postgres/postgres-values.secret.yaml
   values:
-    - fullnameOverride: "postgres"
-      image:
-        # https://hub.docker.com/r/bitnami/postgresql/tags
-        registry: docker.io
-        repository: bitnami/postgresql
-        tag: 14-debian-11
-      # sleep infinity + disable health probes
-      # diagnosticMode:
-      #   enabled: true
-      auth:
-        # postgresPassword set in secret.yaml
-      serviceAccount:
-        create: true
-      # TODO: requests: {}
-      primary:
-        service:
-          type: ClusterIP
-        persistence:
-          storageClass: "local-path-xfs"
-          size: 1
-          annotations:
-            # backups are handled via pgdump to be fully consistent
-            # (which is not guaranteed with filesystem-level backups)
-            backup-enabled: "false"
-      # TODO:
-      # extraDeploy:
-      # - apiVersion: kci.rocks/v1beta1
-      #   kind: DbInstance
-      #   ...
+    - postgres/values.yaml
 
 - name: authentik
   namespace: authentik
@@ -867,91 +203,9 @@ releases:
   chart: authentik/authentik
   version: "2024.12.3"
   secrets:
-    - "./environments/{{ .Environment.Name }}/authentik-values.secret.yaml"
-  # https://github.com/goauthentik/helm/blob/main/charts/authentik/values.yaml
+    - authentik/authentik-values.secret.yaml
   values:
-    - authentik:
-        # https://goauthentik.io/docs/installation/configuration
-        avatars: "none"
-        log_level: "info" # trace, debug, info, warning, error
-        # "secret_key" set from secret-helm-values
-        error_reporting:
-          enabled: false
-        disable_update_check: true
-        disable_startup_analytics: true
-        postgresql: null # postgres config is set via environment variables
-        # "secret_key" is set in secret values.yaml
-
-      server:
-        envFrom:
-          - secretRef:
-              name: authentik-db-credentials
-
-        livenessProbe:
-          enabled: true
-          initialDelaySeconds: 60
-          periodSeconds: 30
-
-        ingress:
-          enabled: true
-          annotations:
-            cert-manager.io/cluster-issuer: letsencrypt-production
-            traefik.ingress.kubernetes.io/router.entrypoints: websecure
-          hosts: [ "auth.cubieserver.de" ]
-          tls:
-          - hosts:
-            - auth.cubieserver.de
-            secretName: authentik-ingress-cert
-
-        resources:
-          requests:
-            memory: 450Mi
-            cpu: 10m
-          limits:
-            memory: 900Mi
-        securityContext:
-          runAsNonRoot: true
-        podSecurityContext:
-          allowPrivilegeEscalation: false
-          capabilities: { drop: ["ALL"] }
-          readOnlyRootFilesystem: true
-
-        metrics:
-          enabled: true
-          serviceMonitor:
-            enabled: true
-
-      # deploy Bitnami's Redis chart as a dependency
-      redis:
-        enabled: true
-        # redis is only used as a cache / queue, no need for persistence
-        # disabling persistence uses emptyDir instead
-        # https://github.com/bitnami/charts/blob/master/bitnami/redis/README.md
-        master:
-          persistence:
-            enabled: false
-
-      # we deploy our own postgres instance
-      postgresql:
-        enabled: false
-
-      worker:
-        envFrom:
-          - secretRef:
-              name: authentik-db-credentials
-        resources:
-          requests:
-            memory: 250Mi
-            cpu: 10m
-          limits:
-            memory: 500Mi
-            cpu: 100m
-        securityContext:
-          runAsNonRoot: true
-        podSecurityContext:
-          allowPrivilegeEscalation: false
-          capabilities: { drop: ["ALL"] }
-          readOnlyRootFilesystem: true
+    - authentik/values.yaml
 
 - name: authentik-extras
   namespace: authentik
@@ -960,24 +214,7 @@ releases:
   chart: incubator/raw
   version: 0.2.5
   values:
-  - resources:
-      # TODO: move to Database.kinda.rocks CRD
-    - apiVersion: kci.rocks/v1beta1
-      kind: Database
-      metadata:
-        name: authentik
-      spec:
-        deletionProtected: true
-        instance: pg-instance-prod
-        secretName: authentik-db-credentials
-        secretsTemplates:
-          # https://goauthentik.io/docs/installation/configuration#postgresql-settings
-          AUTHENTIK_POSTGRESQL__HOST: '{{` "{{ .DatabaseHost }}" `}}'
-          AUTHENTIK_POSTGRESQL__NAME: '{{` "{{ .DatabaseName }}" `}}'
-          AUTHENTIK_POSTGRESQL__USER: '{{` "{{ .UserName }}" `}}'
-          AUTHENTIK_POSTGRESQL__PORT: '{{` "{{ .DatabasePort }}" `}}'
-          AUTHENTIK_POSTGRESQL__PASSWORD: '{{` "{{ .Password }}" `}}'
-          AUTHENTIK_POSTGRESQL__USE_PGBOUNCER: "false"
+    - authentik/authentik-extras-values.yaml
 
 - name: nextcloud
   namespace: nextcloud
@@ -988,147 +225,9 @@ releases:
   chart: nextcloud/nextcloud
   version: 6.6.4
   secrets:
-    - "./environments/{{ .Environment.Name }}/nextcloud-values.secret.yaml"
-  # https://github.com/nextcloud/helm/blob/main/charts/nextcloud/values.yaml
+    - nextcloud/nextcloud-values.secret.yaml
   values:
-  - image:
-      # https://github.com/nextcloud/server/tags
-      # https://hub.docker.com/_/nextcloud/tags
-      tag: "30.0.3-apache"
-
-    ingress:
-      enabled: true
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-production
-        traefik.ingress.kubernetes.io/router.entrypoints: websecure
-      hosts:
-        - cloud.cubieserver.de
-      tls:
-        - hosts:
-          - cloud.cubieserver.de
-          secretName: nextcloud-ingress-secret
-
-    # Allow access to MariaDB server
-    podLabels:
-      networkpolicy-mariadb-access: "enabled"
-
-    nextcloud:
-      host: cloud.cubieserver.de
-
-      # dummy credentials that are only used for the first setup (not respected later)
-      username: "admin"
-      password: "hunter2"
-
-      # the following are set in secret values.yaml
-      # mail:
-      #   enabled: false
-      #   fromAddress: user
-      #   domain: domain.com
-      #   smtp:
-      #     host: domain.com
-      #     secure: ssl
-      #     port: 465
-      #     authtype: LOGIN
-      #     name: user
-      #     password: pass
-
-      configs:
-        custom.config.php: |-
-          <?php
-          $CONFIG = array (
-            /* https://github.com/nextcloud/server/blob/c364b0cb193f66ad15e2950c27113b40037d1bf6/config/config.sample.php#L747-L757 */
-            'check_data_directory_permissions' => false,
-          );
-
-      podSecurityContext:
-        fsGroup: 33 # www-data
-
-      securityContext:
-        runAsUser: 33 # www-data
-        runAsGroup: 33
-        readOnlyRootFilesystem: true
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop: ["ALL"]
-
-      # Mount writeable directories so Apache and friends start up properly
-      extraVolumes:
-       - name: tmp
-         emptyDir: {}
-      extraVolumeMounts:
-       - name: tmp
-         mountPath: "/tmp"
-         subPath: "tmp"
-       - name: tmp
-         mountPath: "/var/tmp"
-         subPath: "var-tmp"
-       - name: tmp
-         mountPath: "/var/run"
-         subPath: "var-run"
-
-    resources:
-      requests:
-        memory: 500Mi
-        cpu: 0.5
-      limits:
-        memory: 4Gi
-
-    # First initialization and subsequent upgrades can take a while, enable startup probe
-    startupProbe:
-      enabled: true
-
-    internalDatabase:
-      enabled: false
-
-    externalDatabase:
-      enabled: true
-      host: "mariadb.mariadb.svc.cluster.local"
-      existingSecret:
-        enabled: true
-        # this secret is created by the `Database` resource deployed from the `nextcloud-extras` chart
-        secretName: nextcloud-db-credentials
-        usernameKey: USER
-        passwordKey: PASSWORD
-        databaseKey: DB
-
-    # Note to self: Redis is disabled by default
-    # redis:
-    #   enabled: true
-    #   # redis is only used as a cache, no need for persistence
-    #   # disabling persistence uses emptyDir instead
-    #   # https://github.com/bitnami/charts/blob/master/bitnami/redis/README.md
-    #   master:
-    #     persistence:
-    #       enabled: false
-
-    phpClientHttpsFix:
-      enabled: true
-      protocol: https
-
-    # separate ServiceAccount for Nextcloud pod
-    rbac:
-      enabled: true
-
-    persistence:
-      enabled: true
-      storageClass: "local-path-btrfs"
-
-    # sidecar
-    cronjob:
-      enabled: true
-      resources:
-        requests:
-          cpu: 1m
-          memory: 1Mi
-        limits:
-          cpu: 1
-          memory: 520Mi
-      securityContext:
-        readOnlyRootFilesystem: true
-        allowPrivilegeEscalation: false
-        # busybox' crond must run as root, otherwise the following errors occur:
-        # > crond: can't set groups: Operation not permitted
-        runAsUser: 0
+    - nextcloud/values.yaml
 
 - name: nextcloud-extras
   namespace: nextcloud
@@ -1137,16 +236,7 @@ releases:
   chart: incubator/raw
   version: 0.2.5
   values:
-  - resources:
-    - apiVersion: kinda.rocks/v1beta1
-      kind: Database
-      metadata:
-        name: nextcloud
-      spec:
-        deletionProtected: true
-        instance: mariadb-instance-prod
-        secretName: nextcloud-db-credentials
-        cleanup: true # remove associated secrets and configmaps when deleting this resource
+  - nextcloud/nextcloud-extras.yaml
 
 - name: stirling-pdf
   namespace: stirling-pdf
@@ -1155,79 +245,8 @@ releases:
     type: app
   chart: stirling-tools/stirling-pdf-chart
   version: 1.5.0
-  # https://github.com/Stirling-Tools/Stirling-PDF-chart/blob/main/charts/stirling-pdf/values.yaml
-  # https://www.stirlingtools.com/docs/Advanced%20Configuration/How%20to%20add%20configurations
   values:
-  - fullnameOverride: "stirling-pdf" # override default name "stirling-pdf-stirling-pdf-chart"
-    image:
-      # https://github.com/stirling-tools/Stirling-PDF/releases
-      # https://github.com/Stirling-Tools/Stirling-PDF/pkgs/container/s-pdf
-      registry: "ghcr.io"
-      repository: "stirling-tools/s-pdf"
-      # note that 0.42.0 currently does not work: k get pod -A | grep -v -e Running -e Completed
-      tag: "0.41.0"
-
-    envs:
-      - name: UI_APP_NAME
-        value: "PDF Tools"
-      - name: UI_HOME_DESCRIPTION
-        value: "Cubieserver hosted version of Stirling's PDF tools for editing PDF documents."
-      - name: UI_APP_NAVBAR_NAME
-        value: "Cubieserver PDF Tools"
-
-    resources:
-      limits:
-        cpu: 500m
-        memory: 950Mi
-      requests:
-        cpu: 50m
-        memory: 200Mi # Java is memory hungry...
-
-    probes:
-      liveness:
-        initialDelaySeconds: 90 # should use a startup probe instead...
-
-    ingress:
-      enabled: true
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-production
-        traefik.ingress.kubernetes.io/router.entrypoints: websecure
-      hosts:
-        - name: pdftools.cubieserver.de
-          path: /
-          tls: true
-          tlsSecret: stirling-pdf-ingress-secret
-
-    deployment:
-      extraVolumes:
-        - name: dummy
-          emptyDir: {}
-      extraVolumeMounts:
-        - mountPath: /usr/share/tesseract-ocr
-          name: dummy
-          subPath: tesseract-ocr
-        - mountPath: /logs
-          name: dummy
-          subPath: logs
-        - mountPath: /tmp
-          name: dummy
-          subPath: tmp
-        - mountPath: /configs
-          name: dummy
-          subPath: configs
-
-    # pod
-    securityContext:
-      fsGroup: 65534
-
-    # container
-    containerSecurityContext:
-      runAsUser: 65534 # nobody
-      runAsGroup: 65534 # nogroup
-      readOnlyRootFilesystem: true
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop: ["ALL"]
+    - stirling-pdf/values.yaml
 
   # Note: for initial setup, follow: https://www.home-assistant.io/getting-started/onboarding/
 - name: home-assistant
@@ -1237,80 +256,27 @@ releases:
     type: app
   chart: pajikos/home-assistant
   version: 0.2.24
-  # https://github.com/pajikos/home-assistant-helm-chart/blob/main/charts/home-assistant/values.yaml
   values:
-  - image:
-      # https://github.com/home-assistant/core/releases
-      # https://github.com/home-assistant/core/pkgs/container/home-assistant
-      repository: "ghcr.io/home-assistant/home-assistant"
-      tag: "2025.2.5"
-    env:
-    - name: "TZ"
-      value: "Europe/Zurich"
-    nodeSelector:
-      device: zigbee-hub
-    # Required for use auto-discovery feature of Home Assistant
-    hostNetwork: true
-    hostPort:
-      enabled: true # can be enabled once ingress is enabled
-      port: 8123
-    ingress:
-      # Enable ingress for home assistant
-      enabled: false # TODO
-    persistence:
-      enabled: true
-      size: 1
-      storageClass: "local-path-btrfs"
-    additionalVolumes:
-    - name: zigbee-hub
-      hostPath:
-        type: CharDevice
-        path: "/dev/serial/by-id/usb-ITEAD_SONOFF_Zigbee_3.0_USB_Dongle_Plus_V2_20231008100925-if00"
-    additionalMounts:
-    - name: zigbee-hub
-      mountPath: "/dev/ttyACM0"
-    securityContext:
-      privileged: true # required to mount a device
+    - home-assistant/values.yaml
 
 - name: redlib
   namespace: reddit
   createNamespace: true
   labels:
     type: app
-  chart: "./local_charts/redlib/"
+  chart: ./redlib/chart/
   values:
-    - ingress:
-        enabled: true
-        annotations:
-          cert-manager.io/cluster-issuer: letsencrypt-production
-          traefik.ingress.kubernetes.io/router.entrypoints: websecure
-        hosts:
-          - host: reddit.cubieserver.de
-            paths:
-              - path: /
-                pathType: ImplementationSpecific
-        tls:
-          - secretName: redlib-ingress-secret
-            hosts:
-              - reddit.cubieserver.de
+    - redlib/values.yaml
 
 - name: jellyfin
   namespace: jellyfin
   createNamespace: true
   labels:
     type: app
-  chart: "./local_charts/jellyfin-helm/charts/jellyfin"
+  chart: jellyfin/jellyfin
+  version: 2.3.0
   values:
     - jellyfin/jellyfin.values.yaml
-    - ingress:
-        enabled: true
-        annotations:
-          cert-manager.io/cluster-issuer: letsencrypt-production
-          traefik.ingress.kubernetes.io/router.entrypoints: websecure
-        hosts: ["media.cubieserver.de"]
-        tls:
-          - secretName: "media.cubieserver.de-ingress-cert"
-            hosts: ["media.cubieserver.de"]
 
 - name: arr
   namespace: jellyfin
@@ -1320,16 +286,6 @@ releases:
   version: "3.5.1"
   values:
     - jellyfin/arr.values.yaml
-    - hostname: media.cubieserver.de
-      ingress:
-        main:
-          annotations:
-            cert-manager.io/cluster-issuer: letsencrypt-production
-            traefik.ingress.kubernetes.io/router.entrypoints: websecure
-          # re-use certificate generated by Jellyfin Helm chart above
-          tls:
-            - secretName: "media.cubieserver.de-ingress-cert"
-              hosts: ["media.cubieserver.de"]
 
 - name: webtools
   namespace: webtools
@@ -1339,62 +295,18 @@ releases:
   chart: bjw-s/app-template
   version: "3.5.1"
   values:
-    - webtools/webtools.values.yaml
-    - ingress:
-        it-tools:
-          annotations:
-            cert-manager.io/cluster-issuer: letsencrypt-production
-            traefik.ingress.kubernetes.io/router.entrypoints: websecure
-        rustpad:
-          annotations:
-            cert-manager.io/cluster-issuer: letsencrypt-production
-            traefik.ingress.kubernetes.io/router.entrypoints: websecure
-        cyberchef:
-          annotations:
-            cert-manager.io/cluster-issuer: letsencrypt-production
-            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    - webtools/values.yaml
 
 - name: ejabberd
   namespace: ejabberd
   labels:
     type: app
-  chart: ./local_charts/martialblog-helm-charts/ejabberd/
+  chart: ./ejabberd/martialblog-helm-charts/ejabberd/
   # version: "0.2.0"
   secrets:
-    - "./environments/{{ .Environment.Name }}/ejabberd-values.secret.yaml"
+    - ejabberd/ejabberd-values.secret.yaml
   values:
-    - image:
-        # https://github.com/processone/ejabberd/releases
-        # https://github.com/processone/ejabberd/pkgs/container/ejabberd
-        repository: ghcr.io/processone/ejabberd
-        tag: 23.01@sha256:163b9d9ccb2edd2c70863712b75ef360f0f5cb35f4c0f8027b74f6c58e1160a9
-
-      # no persistence for the moment (empytDir only)
-      # the container gets restarted rarely enough that this is not a problem
-      persistence:
-        enabled: false
-
-      resources:
-        limits:
-          cpu: 500m
-          memory: 250Mi
-        requests:
-          cpu: 10m
-          memory: 60Mi
-
-      service:
-        type: LoadBalancer
-
-      # Allow access to MariaDB server
-      podLabels:
-        networkpolicy-mariadb-access: "enabled"
-
-      certificate:
-        create: true
-        issuerRef:
-          group: cert-manager.io
-          kind: ClusterIssuer
-          name: letsencrypt-production
+    - ejabberd/values.yaml
 
 - name: olivetin
   namespace: olivetin
@@ -1405,13 +317,3 @@ releases:
   version: "3.5.1"
   values:
     - olivetin/olivetin.values.yaml
-    - hostname: "admin.cubieserver.de"
-      controllers:
-        olivetin:
-          containers:
-            olivetin:
-              image:
-                # https://github.com/OliveTin/OliveTin/releases
-                # https://github.com/olivetin/OliveTin/pkgs/container/olivetin
-                repository: ghcr.io/olivetin/olivetin
-                tag: 2025.2.21

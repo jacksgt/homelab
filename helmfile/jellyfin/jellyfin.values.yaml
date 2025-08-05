@@ -15,14 +15,17 @@ resources:
     cpu: 2
     memory: 1.5Gi
 
-extraVolumes:
+deploymentStrategy:
+  type: Recreate
+
+volumes:
   - name: hwa
     hostPath:
       path: /dev/dri
   - name: tmp
     emptyDir: {}
 
-extraVolumeMounts:
+volumeMounts:
   - name: hwa
     mountPath: /dev/dri
   - name: tmp
@@ -41,6 +44,10 @@ securityContext:
       - "SYS_ADMIN"
     drop:
       - "ALL"
+
+serviceAccount:
+  create: true
+  automount: false
 
 livenessProve:
   enabled: false
@@ -61,3 +68,17 @@ persistence:
       backup-enabled: "false"
     size: 500Gi
     storageClass: "local-path-btrfs"
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: "media.cubieserver.de"
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: "media.cubieserver.de-ingress-cert"
+      hosts: ["media.cubieserver.de"]

@@ -1,6 +1,6 @@
 ---
 # Hostname is used further down in the Ingress section
-hostname: ""
+hostname: "admin.cubieserver.de"
 
 # Configuration for OliveTin
 # https://docs.olivetin.app/config.html
@@ -151,7 +151,7 @@ controllers:
           # https://github.com/olivetin/OliveTin/pkgs/container/olivetin
           repository: ghcr.io/olivetin/olivetin
           # repository: docker.io/traefik/whoami
-          tag: latest
+          tag: 2025.2.21
           pullPolicy: IfNotPresent
 
         # args: ["--port=1337"]

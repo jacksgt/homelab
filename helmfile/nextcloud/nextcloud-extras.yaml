@@ -1,0 +1,24 @@
+resources:
+  - apiVersion: kinda.rocks/v1beta1
+    kind: Database
+    metadata:
+      name: nextcloud
+    spec:
+      deletionProtected: true
+      instance: mariadb-instance-prod
+      secretName: nextcloud-db-credentials
+      cleanup: true # remove associated secrets and configmaps when deleting this resource
+      credentials:
+        templates:
+        - name: HOST
+          secret: true
+          template: '{{ .Hostname }}:{{ .Port }}'
+        - name: DBNAME
+          secret: true
+          template: '{{ .Database }}'
+        - name: PASSWORD
+          secret: true
+          template: '{{ .Password }}'
+        - name: USER
+          secret: true
+          template: '{{ .Username }}'

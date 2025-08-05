@@ -1,0 +1,138 @@
+image:
+  # https://github.com/nextcloud/server/tags
+  # https://hub.docker.com/_/nextcloud/tags
+  tag: "30.0.3-apache"
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - cloud.cubieserver.de
+  tls:
+    - hosts:
+      - cloud.cubieserver.de
+      secretName: nextcloud-ingress-secret
+
+# Allow access to MariaDB server
+podLabels:
+  networkpolicy-mariadb-access: "enabled"
+
+nextcloud:
+  host: cloud.cubieserver.de
+
+  # dummy credentials that are only used for the first setup (not respected later)
+  username: "admin"
+  password: "hunter2"
+
+  # the following are set in secret values.yaml
+  # mail:
+  #   enabled: false
+  #   fromAddress: user
+  #   domain: domain.com
+  #   smtp:
+  #     host: domain.com
+  #     secure: ssl
+  #     port: 465
+  #     authtype: LOGIN
+  #     name: user
+  #     password: pass
+
+  configs:
+    custom.config.php: |-
+      <?php
+      $CONFIG = array (
+        /* https://github.com/nextcloud/server/blob/c364b0cb193f66ad15e2950c27113b40037d1bf6/config/config.sample.php#L747-L757 */
+        'check_data_directory_permissions' => false,
+      );
+
+  podSecurityContext:
+    fsGroup: 33 # www-data
+
+  securityContext:
+    runAsUser: 33 # www-data
+    runAsGroup: 33
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+
+  # Mount writeable directories so Apache and friends start up properly
+  extraVolumes:
+   - name: tmp
+     emptyDir: {}
+  extraVolumeMounts:
+   - name: tmp
+     mountPath: "/tmp"
+     subPath: "tmp"
+   - name: tmp
+     mountPath: "/var/tmp"
+     subPath: "var-tmp"
+   - name: tmp
+     mountPath: "/var/run"
+     subPath: "var-run"
+
+resources:
+  requests:
+    memory: 500Mi
+    cpu: 0.5
+  limits:
+    memory: 4Gi
+
+# First initialization and subsequent upgrades can take a while, enable startup probe
+startupProbe:
+  enabled: true
+
+internalDatabase:
+  enabled: false
+
+externalDatabase:
+  enabled: true
+  host: "mariadb.mariadb.svc.cluster.local"
+  existingSecret:
+    enabled: true
+    # this secret is created by the `Database` resource deployed from the `nextcloud-extras` chart
+    secretName: nextcloud-db-credentials
+    usernameKey: USER
+    passwordKey: PASSWORD
+    databaseKey: DB
+
+# Note to self: Redis is disabled by default
+# redis:
+#   enabled: true
+#   # redis is only used as a cache, no need for persistence
+#   # disabling persistence uses emptyDir instead
+#   # https://github.com/bitnami/charts/blob/master/bitnami/redis/README.md
+#   master:
+#     persistence:
+#       enabled: false
+
+phpClientHttpsFix:
+  enabled: true
+  protocol: https
+
+# separate ServiceAccount for Nextcloud pod
+rbac:
+  enabled: true
+
+persistence:
+  enabled: true
+  storageClass: "local-path-btrfs"
+
+# sidecar
+cronjob:
+  enabled: true
+  resources:
+    requests:
+      cpu: 1m
+      memory: 1Mi
+    limits:
+      cpu: 1
+      memory: 520Mi
+  securityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    # busybox' crond must run as root, otherwise the following errors occur:
+    # > crond: can't set groups: Operation not permitted
+    runAsUser: 0

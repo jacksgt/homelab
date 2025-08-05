@@ -1,6 +1,6 @@
 ---
 # Hostname used for various applications
-hostname: ""
+hostname: "media.cubieserver.de"
 
 global:
   # -- Set an override for the prefix of the fullname
@@ -666,6 +666,8 @@ ingress:
   main:
     enabled: true
     annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-production
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
       traefik.ingress.kubernetes.io/router.middlewares: "{{ .Release.Namespace }}-{{ .Release.Name }}-authentik-auth-proxy@kubernetescrd,{{ .Release.Namespace }}-{{ .Release.Name }}-strip-prefixes@kubernetescrd"
 
     # -- Provide additional labels which may be required. Helm templates can be used.
@@ -721,7 +723,7 @@ ingress:
 
     # -- Configure TLS for the ingress. Both secretName and hosts can process a Helm template.
     tls:
-     - secretName: "{{ .Release.Name }}-ingress-secret"
+     - secretName: "{{ .Values.hostname }}-ingress-cert"
        hosts:
          - "{{ .Values.hostname }}"
 

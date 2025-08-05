@@ -1,0 +1,82 @@
+authentik:
+  # https://goauthentik.io/docs/installation/configuration
+  avatars: "none"
+  log_level: "info" # trace, debug, info, warning, error
+  # "secret_key" set from secret-helm-values
+  error_reporting:
+    enabled: false
+  disable_update_check: true
+  disable_startup_analytics: true
+  postgresql: null # postgres config is set via environment variables
+  # "secret_key" is set in secret values.yaml
+
+server:
+  envFrom:
+    - secretRef:
+        name: authentik-db-credentials
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 30
+
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-production
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    hosts: [ "auth.cubieserver.de" ]
+    tls:
+    - hosts:
+      - auth.cubieserver.de
+      secretName: authentik-ingress-cert
+
+  resources:
+    requests:
+      memory: 450Mi
+      cpu: 10m
+    limits:
+      memory: 900Mi
+  securityContext:
+    runAsNonRoot: true
+  podSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities: { drop: ["ALL"] }
+    readOnlyRootFilesystem: true
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# deploy Bitnami's Redis chart as a dependency
+redis:
+  enabled: true
+  # redis is only used as a cache / queue, no need for persistence
+  # disabling persistence uses emptyDir instead
+  # https://github.com/bitnami/charts/blob/master/bitnami/redis/README.md
+  master:
+    persistence:
+      enabled: false
+
+# we deploy our own postgres instance
+postgresql:
+  enabled: false
+
+worker:
+  envFrom:
+    - secretRef:
+        name: authentik-db-credentials
+  resources:
+    requests:
+      memory: 250Mi
+      cpu: 10m
+    limits:
+      memory: 500Mi
+      cpu: 100m
+  securityContext:
+    runAsNonRoot: true
+  podSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities: { drop: ["ALL"] }
+    readOnlyRootFilesystem: true

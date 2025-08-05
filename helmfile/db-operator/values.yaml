@@ -1,0 +1,36 @@
+crds:
+  install: true
+  keep: true
+# https://github.com/db-operator/db-operator/releases
+# https://github.com/db-operator/db-operator/pkgs/container/db-operator
+image:
+  repository: ghcr.io/db-operator/db-operator
+  tag: 2.10.0
+  pullPolicy: IfNotPresent
+  logLevel: info
+# "" means watch resources in all namespaces
+watchNamespace: ""
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsNonRoot: true
+resources:
+  requests:
+    cpu: 10m
+    memory: 20Mi
+  limits:
+    cpu: 100m
+    memory: 100Mi
+# Allow access to database servers
+# This label needs to be added to the namespace as well
+podLabels:
+  networkpolicy-mariadb-access: "enabled"
+serviceMonitor:
+  enabled: false
+webhook:
+  certificate:
+    create: true
+    issuer:
+      create: false
+      kind: ClusterIssuer
+      name: selfsigned

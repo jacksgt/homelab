@@ -1,0 +1,14 @@
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: reddit.cubieserver.de
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+    - secretName: redlib-ingress-secret
+      hosts:
+        - reddit.cubieserver.de

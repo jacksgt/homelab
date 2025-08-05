@@ -1,0 +1,29 @@
+fullnameOverride: "postgres"
+image:
+  # https://hub.docker.com/r/bitnami/postgresql/tags
+  registry: docker.io
+  repository: bitnami/postgresql
+  tag: 14-debian-11
+# sleep infinity + disable health probes
+# diagnosticMode:
+#   enabled: true
+auth:
+  # postgresPassword set in secret.yaml
+serviceAccount:
+  create: true
+# TODO: requests: {}
+primary:
+  service:
+    type: ClusterIP
+  persistence:
+    storageClass: "local-path-xfs"
+    size: 1
+    annotations:
+      # backups are handled via pgdump to be fully consistent
+      # (which is not guaranteed with filesystem-level backups)
+      backup-enabled: "false"
+# TODO:
+# extraDeploy:
+# - apiVersion: kci.rocks/v1beta1
+#   kind: DbInstance
+#   ...

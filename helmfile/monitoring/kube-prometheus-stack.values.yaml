@@ -1,3 +1,5 @@
+# https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
+
 cleanPrometheusOperatorObjectNames: true
 
 defaultRules:

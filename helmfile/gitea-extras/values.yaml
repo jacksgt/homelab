@@ -1,0 +1,14 @@
+resources:
+- apiVersion: kci.rocks/v1beta1
+  kind: Database
+  metadata:
+    name: gitea
+  spec:
+    deletionProtected: true
+    instance: mariadb-instance-prod
+    secretName: gitea-db-credentials
+    secretsTemplates:
+      host: "{{ .DatabaseHost }}:{{ .DatabasePort }}"
+      name: "{{ .DatabaseName }}"
+      password: "{{ .Password }}"
+      user: "{{ .UserName }}"

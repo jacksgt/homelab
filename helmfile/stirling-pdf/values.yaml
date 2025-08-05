@@ -1,0 +1,73 @@
+# https://github.com/Stirling-Tools/Stirling-PDF-chart/blob/main/charts/stirling-pdf/values.yaml
+# https://www.stirlingtools.com/docs/Advanced%20Configuration/How%20to%20add%20configurations
+
+fullnameOverride: "stirling-pdf" # override default name "stirling-pdf-stirling-pdf-chart"
+image:
+  # https://github.com/stirling-tools/Stirling-PDF/releases
+  # https://github.com/Stirling-Tools/Stirling-PDF/pkgs/container/s-pdf
+  registry: "ghcr.io"
+  repository: "stirling-tools/s-pdf"
+  # note that 0.42.0 currently does not work: k get pod -A | grep -v -e Running -e Completed
+  tag: "0.41.0"
+
+envs:
+  - name: UI_APP_NAME
+    value: "PDF Tools"
+  - name: UI_HOME_DESCRIPTION
+    value: "Cubieserver hosted version of Stirling's PDF tools for editing PDF documents."
+  - name: UI_APP_NAVBAR_NAME
+    value: "Cubieserver PDF Tools"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 950Mi
+  requests:
+    cpu: 50m
+    memory: 200Mi # Java is memory hungry...
+
+probes:
+  liveness:
+    initialDelaySeconds: 90 # should use a startup probe instead...
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - name: pdftools.cubieserver.de
+      path: /
+      tls: true
+      tlsSecret: stirling-pdf-ingress-secret
+
+deployment:
+  extraVolumes:
+    - name: dummy
+      emptyDir: {}
+  extraVolumeMounts:
+    - mountPath: /usr/share/tesseract-ocr
+      name: dummy
+      subPath: tesseract-ocr
+    - mountPath: /logs
+      name: dummy
+      subPath: logs
+    - mountPath: /tmp
+      name: dummy
+      subPath: tmp
+    - mountPath: /configs
+      name: dummy
+      subPath: configs
+
+# pod
+securityContext:
+  fsGroup: 65534
+
+# container
+containerSecurityContext:
+  runAsUser: 65534 # nobody
+  runAsGroup: 65534 # nogroup
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]

@@ -1,0 +1,159 @@
+# https://gitea.com/gitea/helm-chart/src/branch/main/values.yaml
+image:
+  # https://github.com/go-gitea/gitea/tags
+  # Note that 1.22.x is the last version that supports migration to Forgejo, so let's stay there for now
+  # https://forgejo.org/2024-12-gitea-compatibility/
+  tag: "1.22.6"
+  pullPolicy: IfNotPresent
+  rootless: true
+# Allow access to MariaDB server
+# These labels will be propagated to the Deployment as well as the Pods
+deployment:
+  labels:
+    networkpolicy-mariadb-access: "enabled"
+gitea:
+  # set in gitea-values.secret.yaml
+  # admin:
+  #   username:
+  #   password:
+  #   email:
+
+  # Gitea configuration, aka. gitea.ini
+  # https://docs.gitea.io/en-us/config-cheat-sheet/
+  config:
+    APP_NAME: 'Gitea: Git@Cubieserver'
+    server:
+      SSH_PORT: 2222
+      DOMAIN: "" # set in secret values
+      OFFLINE_MODE: true
+      LANDING_PAGE: "explore"
+    actions:
+      ENABLED: true # as of v1.20, Gitea Actions are disabled by default
+    service:
+      # only OAuth2/OIDC login is allowed
+      DISABLE_REGISTRATION: true
+      # users should register themselves with the IDP, not in Gitea
+      SHOW_REGISTRATION_BUTTON: false
+    # https://docs.gitea.com/next/administration/logging-config
+    log:
+      LEVEL: "Info" # Trace, Debug, Info, Warn, Error, Critical, Fatal, None
+    # since v9 of the Helm chart "HA" mode is enabled by default
+    # the following settings switch back to standalone mode, see:
+    # https://gitea.com/gitea/helm-chart#single-pod-configurations
+    # https://gitea.com/gitea/helm-chart/issues/524
+    session:
+      PROVIDER: db
+    cache:
+      ADAPTER: twoqueue
+    queue:
+      TYPE: level
+    indexer:
+      ISSUE_INDEXER_TYPE: bleve
+      REPO_INDEXER_ENABLED: true
+
+  # https://docs.gitea.io/en-us/administration/config-cheat-sheet/#database-database
+  additionalConfigFromEnvs:
+    # Secret "gitea-db-credentials" is created from gitea-extras chart
+    - name: GITEA__DATABASE__DB_TYPE
+      value: "mysql"
+    - name: GITEA__DATABASE__LOG_SQL
+      value: "false"
+    - name: GITEA__DATABASE__HOST
+      valueFrom:
+        secretKeyRef:
+          name: gitea-db-credentials
+          key: host
+    - name: GITEA__DATABASE__NAME
+      valueFrom:
+        secretKeyRef:
+          name: gitea-db-credentials
+          key: name
+    - name: GITEA__DATABASE__USER
+      valueFrom:
+        secretKeyRef:
+          name: gitea-db-credentials
+          key: user
+    - name: GITEA__DATABASE__PASSWD
+      valueFrom:
+        secretKeyRef:
+          name: gitea-db-credentials
+          key: password
+
+# https://docs.gitea.com/administration/customizing-gitea
+extraVolumes:
+  - name: custom-gitea-config
+    configMap:
+      name: custom-gitea-config
+extraContainerVolumeMounts:
+  - name: custom-gitea-config
+    mountPath: /data/gitea/public/robots.txt
+    subPath: robots.txt
+    readOnly: true
+
+persistence:
+  enabled: true
+  storageClass: "local-path-btrfs"
+  size: 1
+
+strategy:
+  type: Recreate
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 50m
+  limits:
+    memory: 512Mi
+
+service:
+  ssh:
+    port: 2222 # see SSH_PORT above
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+
+  # set in gitea-values.secret.yaml
+  # hosts:
+  # tls:
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 1000
+  runAsUser: 1000
+
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+
+# disabled unwanted dependencies
+memcached:
+  enabled: false
+postgresql:
+  enabled: false
+postgresql-ha:
+  enabled: false
+redis-cluster:
+  enabled: false
+test:
+  enabled: false
+
+# additional resources
+extraDeploy:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: custom-gitea-config
+  data:
+    # Disallow bots from crawling (causes lots of traffic)
+    # https://docs.gitea.com/administration/search-engines-indexation
+    robots.txt: |
+      User-agent: *
+      Disallow: /
