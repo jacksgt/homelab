@@ -1,0 +1,30 @@
+FROM docker.io/library/alpine:3.22
+
+# Install tools and dependcies
+RUN apk add --no-cache \
+    bash \
+    git \
+    nano \
+    kubectl \
+    helm \
+    curl \
+    sops \
+    ca-certificates
+
+# Install Helmfile (not available in alpine stable repo)
+ENV HELMFILE_VERSION=1.1.3
+RUN cd /tmp \
+    && curl -LO "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION}_linux_amd64.tar.gz" \
+    && tar -xzf helmfile_${HELMFILE_VERSION}_linux_amd64.tar.gz \
+    && chmod +x helmfile \
+    && mv helmfile /usr/local/bin/ \
+    && rm -rf /tmp/*
+
+# Install additional Helm plugins
+# https://github.com/databus23/helm-diff/releases
+RUN helm plugin install https://github.com/databus23/helm-diff --version v3.12.4
+# https://github.com/jkroepke/helm-secrets/releases
+RUN helm plugin install https://github.com/jkroepke/helm-secrets --version v4.6.5
+
+# Set working directory
+WORKDIR /workspace
