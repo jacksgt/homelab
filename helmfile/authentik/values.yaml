@@ -1,5 +1,6 @@
+# https://github.com/goauthentik/helm/blob/main/charts/authentik/values.yaml
 authentik:
-  # https://goauthentik.io/docs/installation/configuration
+  # https://docs.goauthentik.io/docs/install-config/configuration/
   avatars: "none"
   log_level: "info" # trace, debug, info, warning, error
   # "secret_key" set from secret-helm-values
@@ -9,6 +10,15 @@ authentik:
   disable_startup_analytics: true
   postgresql: null # postgres config is set via environment variables
   # "secret_key" is set in secret values.yaml
+  # Email configuration
+  email:
+    host: "postfix-mail.postfix.svc.cluster.local"
+    port: 587
+    username: ""
+    password: ""
+    use_tls: false
+    use_ssl: false
+    from: "admin@cubieserver.de"
 
 server:
   envFrom:
