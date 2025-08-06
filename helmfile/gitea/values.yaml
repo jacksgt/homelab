@@ -37,6 +37,16 @@ gitea:
     # https://docs.gitea.com/next/administration/logging-config
     log:
       LEVEL: "Info" # Trace, Debug, Info, Warn, Error, Critical, Fatal, None
+    # Mail configuration
+    mailer:
+      ENABLED: true
+      PROTOCOL: smtp
+      SMTP_ADDR: postfix-mail.postfix.svc.cluster.local
+      SMTP_PORT: 587
+      FROM: admin@cubieserver.de
+      USER: ""
+      PASSWD: ""
+      HELO_HOSTNAME: cubieserver.de
     # since v9 of the Helm chart "HA" mode is enabled by default
     # the following settings switch back to standalone mode, see:
     # https://gitea.com/gitea/helm-chart#single-pod-configurations
