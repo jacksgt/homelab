@@ -1,0 +1,57 @@
+# Postfix mail server configuration
+# https://github.com/bokysan/docker-postfix/blob/master/helm/mail/values.yaml
+
+service:
+  type: ClusterIP
+  port: 587
+
+# we don't attach a PVC, meaning messages may get lost when the pod is restarted, but that's okay for us.
+persistence:
+  enabled: false
+
+recreateOnRedeploy: false
+
+pod:
+  securityContext:
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+    # Postfix can't easily run as unprivileged user, but it drops permissions after starting
+    # https://github.com/bokysan/docker-postfix/issues/195
+    runAsNonRoot: false
+
+container:
+  postfix:
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+
+readinessProbe:
+  periodSeconds: 60
+livenessProbe:
+  periodSeconds: 60
+
+config:
+  general:
+    TZ: "UTC"
+    LOG_FORMAT: "json"
+    ALLOWED_SENDER_DOMAINS: "cubieserver.de"
+    # the following are set in postfix-values.secret.yaml
+    # RELAYHOST:
+    # RELAYHOST_USERNAME:
+    # RELAYHOST_PASSWORD:
+  postfix:
+    myhostname: "cubieserver.de"
+    smtp_tls_security_level: "may"
+    # To reduce log noise, only try authentication mechanisms supported by Zoho.com
+    smtpd_sasl_auth_enable: "no"
+    smtp_sasl_mechanism_filter: "plain, login"
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 200Mi
+  requests:
+    cpu: 50m
+    memory: 50Mi

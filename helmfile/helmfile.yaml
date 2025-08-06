@@ -29,6 +29,8 @@ repositories:
    url: https://db-operator.github.io/charts
  - name: jellyfin
    url: https://jellyfin.github.io/jellyfin-helm
+ - name: docker-postfix
+   url: https://bokysan.github.io/docker-postfix/
 
   # - name: myOCIRegistry
   #   url: myregistry.azurecr.io
@@ -317,3 +319,15 @@ releases:
   version: "3.5.1"
   values:
     - olivetin/olivetin.values.yaml
+
+- name: postfix
+  namespace: postfix
+  createNamespace: true
+  labels:
+    type: platform
+  chart: docker-postfix/mail
+  version: 4.4.0
+  secrets:
+    - postfix/postfix-values.secret.yaml
+  values:
+    - postfix/values.yaml
