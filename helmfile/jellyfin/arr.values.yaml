@@ -1,3 +1,5 @@
+# https://github.com/bjw-s-labs/helm-charts/blob/main/charts/library/common/values.yaml
+# https://github.com/bjw-s-labs/helm-charts/raw/refs/heads/main/charts/library/common/values.schema.json
 ---
 # Hostname used for various applications
 hostname: "media.cubieserver.de"
@@ -39,7 +41,7 @@ defaultPodOptions:
 controllers:
 
   ############################################################################################
-  filebrowser:
+  copyparty:
     # -- enable the controller.
     enabled: true
 
@@ -50,7 +52,7 @@ controllers:
     annotations: {}
     # -- Set labels on the deployment/statefulset/daemonset/cronjob/job
     labels:
-      app.kubernetes.io/component: filebrowser
+      app.kubernetes.io/component: copyparty
 
     # -- Number of desired pods. When using a HorizontalPodAutoscaler, set this to `null`.
     replicas: 1
@@ -63,23 +65,23 @@ controllers:
     revisionHistoryLimit: 3
 
     containers:
-      filebrowser:
+      copyparty:
         image:
-          # https://github.com/filebrowser/filebrowser/releases
-          repository: docker.io/filebrowser/filebrowser
-          tag: v2.32.0
+          # https://github.com/9001/copyparty/pkgs/container/copyparty-ac
+          # https://github.com/9001/copyparty/blob/hovudstraum/scripts/docker/README.md
+          repository: ghcr.io/9001/copyparty-ac
+          tag: 1.19.0
           pullPolicy: IfNotPresent
 
-        command:
-          - /filebrowser
-          - -d
-          - /tmp/database.db
+        command: ["python3", "-m", "copyparty", "-c", "/etc/copyparty/copyparty.conf"]
 
         env:
-          - name: FB_NOAUTH
-            value: "true"
-          - name: FB_BASEURL
-            value: /files
+            # enable mimalloc by replacing "NOPE" with "2" for a nice speed-boost (will use twice as much ram)
+          - name: LD_PRELOAD
+            value: /usr/lib/libmimalloc-secure.so.NOPE
+            # ensures log-messages are not delayed (but can reduce speed a tiny bit)
+          - name: PYTHONUNBUFFERED
+            value: 1
 
         probes:
           liveness:
@@ -100,16 +102,18 @@ controllers:
               timeoutSeconds: 1
               failureThreshold: 3
               httpGet:
-                port: 80
+                port: 3923
+                path: /files
 
         # -- Set the resource requests / limits for the container.
         resources:
           requests:
             cpu: 10m
             memory: 50Mi
+          # high CPU/memory limits for faster up-/downloads
           limits:
-            cpu: 100m
-            memory: 200Mi
+            cpu: 1000m
+            memory: 500Mi
 
         # -- Configure the Security Context for the container
         securityContext:
@@ -587,17 +591,18 @@ serviceAccount:
 # Additional services can be added by adding a dictionary key similar to the 'main' service.
 # @default -- See below
 service:
-  filebrowser:
+  copyparty:
     enabled: true
-    controller: filebrowser
+    controller: copyparty
     type: ClusterIP
     labels:
-      app.kubernetes.io/component: filebrowser
+      app.kubernetes.io/component: copyparty
     ports:
       http:
         enabled: true
-        port: 80
+        port: 3923
         protocol: HTTP
+
 
   prowlarr:
     enabled: true
@@ -681,7 +686,7 @@ ingress:
             pathType: Prefix
             service:
               # -- Reference a service identifier from this values.yaml
-              identifier: filebrowser
+              identifier: copyparty
               # -- Overrides the service port number reference for this path
               port: http
           - path: /qbittorrent
@@ -820,6 +825,37 @@ route:
   #       ## Request timeout that are applied to the rules.
   #       timeouts: {}
 
+configMaps:
+  copyparty-config:
+    enabled: true
+    data:
+      copyparty.conf: |
+        [global]
+          e2dsa               # enable file indexing and filesystem scanning
+          e2ts                # enable multimedia indexing
+          re-maxage: 3600     # re-index once an hour
+          hist: /tmp/hists/   # save index and thumbnails in this folder, instead of in the volume
+          ansi                # enable colors in log messages
+          p: 3923             # listen on port 3923
+          ver                 # show copyparty version in the controlpanel
+          # grid              # show thumbnails/grid-view by default
+          theme: 2            # classic-light
+          # name: datasaver   # change the server-name that's displayed in the browser
+          # stats, nos-dup   #b  enable the prometheus endpoint, but disable the dupes counter (too slow)
+
+          # enable IdP support by expecting username/groupname in
+          # http-headers provided by the reverse-proxy; header "X-IdP-User"
+          # will contain the username, "X-IdP-Group" the groupname
+          # idp-h-usr: x-idp-user
+          # idp-h-grp: x-idp-group
+
+          rp-loc=/files       # reverse proxy exposes behind a subpath
+
+        [/]            # create a volume at the URL "/files", which will
+          /data           # share /data inside the container
+          accs:
+            rwmda: *      # everyone gets read-write-move-delete-admin
+
 # -- Configure persistence for the chart here.
 # Additional items can be added by adding a dictionary key similar to the 'config' key.
 # [[ref]](https://bjw-s-labs.github.io/helm-charts/docs/common-library/common-library-storage)
@@ -833,14 +869,23 @@ persistence:
       - path: /tmp
         readOnly: false
 
+  copyparty-config:
+    enabled: true
+    type: configMap
+    identifier: copyparty-config
+    advancedMounts:
+      copyparty: # the controller
+        copyparty: # the container
+          - path: /etc/copyparty
+
   data:
     enabled: true
     type: persistentVolumeClaim
     existingClaim: jellyfin-media
     advancedMounts:
-      filebrowser: # the controller
-        filebrowser: # the container
-          - path: /srv
+      copyparty: # the controller
+        copyparty: # the container
+          - path: /data
             readOnly: false
       qbittorrent:
         qbittorrent:
@@ -979,7 +1024,7 @@ rawResources:
         stripPrefix:
           prefixes:
           - /qbittorrent
-          - /files
+          # - /files
 
 # -- Configure the Roles and Role Bindings for the chart here.
 rbac:
