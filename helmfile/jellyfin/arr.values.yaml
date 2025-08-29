@@ -487,7 +487,7 @@ controllers:
             cpu: 100m
             memory: 100Mi
           limits:
-            cpu: 500m
+            cpu: 1 # high CPU limit to allow fast downloads
             memory: 800Mi
 
         # -- Configure the Security Context for the container
@@ -839,9 +839,9 @@ configMaps:
           p: 3923             # listen on port 3923
           ver                 # show copyparty version in the controlpanel
           # grid              # show thumbnails/grid-view by default
-          theme: 2            # classic-light
+          theme: 1            # classic-light
           # name: datasaver   # change the server-name that's displayed in the browser
-          # stats, nos-dup   #b  enable the prometheus endpoint, but disable the dupes counter (too slow)
+          # stats, nos-dup    # enable the prometheus endpoint, but disable the dupes counter (too slow)
 
           # enable IdP support by expecting username/groupname in
           # http-headers provided by the reverse-proxy; header "X-IdP-User"
