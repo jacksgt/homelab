@@ -10,7 +10,25 @@
         "pin",
         "digest"
       ],
-      "automerge": true
+      "automerge": false
+    },
+    {
+	  // group ansible python updates into a single PR
+      "matchFiles": ["ansible/requirements.txt"],
+      "groupName": "ansible-python-dependencies"
+    },
+    {
+	  // group ansible galaxy collection updates into a single PR
+      "matchFiles": ["ansible/requirements.yml"],
+      "groupName": "ansible-galaxy-collections"
     }
-  ]
+  ],
+	"helm-values": {
+		// extend the managerFilePatterns to be more broad than the preset
+		// https://docs.renovatebot.com/modules/manager/helm-values/
+		"managerFilePatterns": [
+			"/values\\.yaml$/"
+		],
+		"pinDigests": false
+	}
 }
