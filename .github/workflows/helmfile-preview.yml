@@ -1,0 +1,34 @@
+name: Helmfile preview
+
+on:
+  pull_request:
+
+jobs:
+  helmfile-preview:
+    runs-on: ubuntu-latest
+    container: docker.io/jacksgt/homelab-toolbox:latest
+    
+    env:
+      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+
+    steps:
+    - name: Checkout target branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.base_ref }}
+
+    - name: Generate target branch template
+      run: |
+        git checkout ${{ github.base_ref }}
+        cd helmfile
+        helmfile template > ../old.yaml
+
+    - name: Generate source branch template
+      run: |
+        git checkout ${{ github.head_ref }}
+        cd helmfile
+        helmfile template > ../new.yaml
+
+    - name: Show diff
+      run: |
+        diff -u old.yaml new.yaml || true
