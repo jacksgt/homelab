@@ -120,7 +120,7 @@ releases:
     type: platform
   # https://github.com/cert-manager/cert-manager/releases
   chart: jetstack/cert-manager
-  version: v1.17.1
+  version: v1.18.2
   values:
     - ./cert-manager/values.yaml
 
