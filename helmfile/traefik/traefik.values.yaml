@@ -28,6 +28,8 @@ metrics:
     addEntryPointsLabels: false
     addRoutersLabels: true
     addServicesLabels: true
+    ## During Helm chart templating, do not check if Prometheus Operator CRDs are available (useful for CI)
+    disableAPICheck: true
     serviceMonitor:
       enabled: true
       interval: 30s
