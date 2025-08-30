@@ -299,16 +299,16 @@ releases:
   values:
     - webtools/values.yaml
 
-- name: ejabberd
-  namespace: ejabberd
-  labels:
-    type: app
-  chart: ./ejabberd/martialblog-helm-charts/ejabberd/
-  # version: "0.2.0"
-  secrets:
-    - ejabberd/ejabberd-values.secret.yaml
-  values:
-    - ejabberd/values.yaml
+# - name: ejabberd
+#   namespace: ejabberd
+#   labels:
+#     type: app
+#   chart: ./ejabberd/martialblog-helm-charts/ejabberd/
+#   # version: "0.2.0"
+#   secrets:
+#     - ejabberd/ejabberd-values.secret.yaml
+#   values:
+#     - ejabberd/values.yaml
 
 - name: olivetin
   namespace: olivetin
