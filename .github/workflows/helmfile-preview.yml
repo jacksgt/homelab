@@ -7,23 +7,31 @@ jobs:
   helmfile-preview:
     runs-on: ubuntu-latest
     container: docker.io/jacksgt/homelab-toolbox:latest
-    
-    env:
-      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
 
     steps:
-    - name: Checkout target branch
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.base_ref }}
+      # We are not using the "actions/checkout" action because
+      # it requires "node" to be installed in the container.
+    - name: Clone repository
+      run: |
+        set -x
+        # fetch copy of the latest version of the source branch (checked out)
+        git clone --branch ${{ github.head_ref }} --depth 1 --recurse-submodules ${{ github.server_url }}/${{ github.repository }}.git .
+        # fetch copy of the latest version of the target branch (not checked out)
+        git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+        # reduce clutter in terminal output
+        git config set advice.detachedHead false
 
-    - name: Generate target branch template
+    - name: Generate target branch manifests
+      env:
+        SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
       run: |
         git checkout ${{ github.base_ref }}
         cd helmfile
         helmfile template > ../old.yaml
 
-    - name: Generate source branch template
+    - name: Generate source branch manifests
+      env:
+        SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
       run: |
         git checkout ${{ github.head_ref }}
         cd helmfile

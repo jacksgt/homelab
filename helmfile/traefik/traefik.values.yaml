@@ -1,4 +1,7 @@
 # https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
 additionalArguments:
 # Allow creation of services even if no endpoints are available (results in 503 instead of hard-to-debug 404 response)
 - --providers.kubernetesIngress.allowEmptyServices=true
@@ -45,8 +48,11 @@ metrics:
 ports:
   # redirect HTTP (80) to HTTPS (443)
   web:
-    redirectTo:
-      port: websecure
+    redirections:
+      entryPoint:
+        to: websecure
+        scheme: https
+        permanent: true
   websecure:
     tls:
       enabled: true
