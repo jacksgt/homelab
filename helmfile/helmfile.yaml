@@ -225,7 +225,7 @@ releases:
     type: app
   # https://github.com/nextcloud/helm/tree/main/charts/nextcloud
   chart: nextcloud/nextcloud
-  version: 6.6.4
+  version: 6.6.10
   secrets:
     - nextcloud/nextcloud-values.secret.yaml
   values:
