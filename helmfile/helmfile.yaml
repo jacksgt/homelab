@@ -285,7 +285,7 @@ releases:
   labels:
     type: app
   chart: bjw-s/app-template
-  version: "3.5.1"
+  version: "3.7.3"
   values:
     - jellyfin/arr.values.yaml
 
@@ -295,7 +295,7 @@ releases:
   labels:
     type: app
   chart: bjw-s/app-template
-  version: "3.5.1"
+  version: "3.7.3"
   values:
     - webtools/values.yaml
 
@@ -316,7 +316,7 @@ releases:
   labels:
     type: app
   chart: bjw-s/app-template
-  version: "3.5.1"
+  version: "3.7.3"
   values:
     - olivetin/olivetin.values.yaml
 
