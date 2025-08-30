@@ -83,7 +83,7 @@ releases:
   createNamespace: true
   labels:
     type: platform
-  version: 45.25.0
+  version: 77.1.0
   chart: prometheus-community/kube-prometheus-stack
   values:
   - monitoring/kube-prometheus-stack.values.yaml
