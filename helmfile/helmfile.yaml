@@ -108,7 +108,7 @@ releases:
     type: platform
   # https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-adapter/Chart.yaml
   # https://github.com/kubernetes-sigs/prometheus-adapter/releases
-  version: 4.11.0
+  version: 5.1.0
   chart: prometheus-community/prometheus-adapter
   values:
   - monitoring/prometheus-adapter.values.yaml
