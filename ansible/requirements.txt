@@ -1,11 +1,11 @@
 ansible==8.7.0
-ansible-core==2.19.1
+ansible-core==2.19.2
 cffi==1.17.1
 cryptography==41.0.7
 Jinja2==3.1.6
 MarkupSafe==2.1.5
 netaddr==0.10.1
 packaging==23.2
-pycparser==2.22
+pycparser==2.23
 PyYAML==6.0.2
 resolvelib==1.2.0
