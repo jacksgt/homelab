@@ -1,6 +1,6 @@
 FROM docker.io/library/alpine:3.22
 
-# Install tools and dependcies
+# Install tools and dependencies
 RUN apk add --no-cache \
     bash \
     git \
@@ -9,7 +9,21 @@ RUN apk add --no-cache \
     helm \
     curl \
     sops \
+    jq \
+    xz \
+    gzip \
+    bzip2 \
+    zstd \
+    coreutils \
     ca-certificates
+
+ENV YQ_VERSION=4.47.2
+RUN cd /tmp \
+    && curl -LO "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64.tar.gz" \
+    && tar -xzf yq_linux_amd64.tar.gz \
+    && chmod +x yq_linux_amd64 \
+    && mv yq_linux_amd64 /usr/local/bin/yq \
+    && rm -rf /tmp/*
 
 # Install Helmfile (not available in alpine stable repo)
 ENV HELMFILE_VERSION=1.1.3
@@ -25,6 +39,14 @@ RUN cd /tmp \
 RUN helm plugin install https://github.com/databus23/helm-diff --version v3.12.4
 # https://github.com/jkroepke/helm-secrets/releases
 RUN helm plugin install https://github.com/jkroepke/helm-secrets --version v4.6.5
+
+# Install kubedump
+# https://github.com/sj14/kubedump/releases
+ENV KUBEDUMP_VERSION=0.8.2
+RUN cd /tmp \
+    && curl -LO "https://github.com/sj14/kubedump/releases/download/v${KUBEDUMP_VERSION}/kubedump_${KUBEDUMP_VERSION}_linux_amd64" \
+    && mv "kubedump_${KUBEDUMP_VERSION}_linux_amd64" /usr/local/bin/kubedump \
+    && chmod +x /usr/local/bin/kubedump
 
 # Set working directory
 WORKDIR /workspace
