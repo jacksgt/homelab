@@ -12,7 +12,6 @@ auth:
   # postgresPassword set in secret.yaml
 serviceAccount:
   create: true
-# TODO: requests: {}
 primary:
   service:
     type: ClusterIP
@@ -23,8 +22,30 @@ primary:
       # backups are handled via pgdump to be fully consistent
       # (which is not guaranteed with filesystem-level backups)
       backup-enabled: "false"
-# TODO:
-# extraDeploy:
-# - apiVersion: kci.rocks/v1beta1
-#   kind: DbInstance
-#   ...
+  resources:
+    requests:
+      cpu: 250m
+      memory: 250Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+extraDeploy:
+- apiVersion: kinda.rocks/v1beta1
+  kind: DbInstance
+  metadata:
+    name: pg-instance-prod
+    # cluster-wide resource, no namespace
+  spec:
+    adminSecretRef:
+      # TODO: this secret should be managed by Helm as well
+      Name: postgres-admin-secret-for-db-instance
+      Namespace: postgres
+    engine: postgres
+    generic:
+      host: postgres.postgres.svc.cluster.local
+      port: 5432
+    monitoring:
+      enabled: false
+    sslConnection:
+      enabled: false

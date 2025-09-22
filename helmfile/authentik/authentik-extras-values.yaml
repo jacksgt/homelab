@@ -1,6 +1,5 @@
 resources:
-    # TODO: move to Database.kinda.rocks CRD
-  - apiVersion: kci.rocks/v1beta1
+  - apiVersion: kinda.rocks/v1beta1
     kind: Database
     metadata:
       name: authentik
