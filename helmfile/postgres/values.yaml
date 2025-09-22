@@ -1,8 +1,9 @@
+# https://github.com/bitnami/charts/blob/postgresql/13.2.9/bitnami/postgresql/values.yaml
 fullnameOverride: "postgres"
 image:
-  # https://hub.docker.com/r/bitnami/postgresql/tags
+  # https://hub.docker.com/r/bitnamilegacy/postgresql/tags
   registry: docker.io
-  repository: bitnami/postgresql
+  repository: bitnamilegacy/postgresql
   tag: 14-debian-11
 # sleep infinity + disable health probes
 # diagnosticMode:

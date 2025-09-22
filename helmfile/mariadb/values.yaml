@@ -1,6 +1,8 @@
 image:
   # https://hub.docker.com/r/bitnami/mariadb/tags
-  tag: "11.4.4"
+  registry: docker.io
+  repository: bitnamilegacy/mariadb
+  tag: "11.8.3"
   # IMPORTANT: check Nextcloud supported versions!
   # https://docs.nextcloud.com/server/latest/admin_manual/installation/system_requirements.html
 auth:
