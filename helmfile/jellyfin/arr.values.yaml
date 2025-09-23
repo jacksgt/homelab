@@ -70,7 +70,7 @@ controllers:
           # https://github.com/9001/copyparty/pkgs/container/copyparty-ac
           # https://github.com/9001/copyparty/blob/hovudstraum/scripts/docker/README.md
           repository: ghcr.io/9001/copyparty-ac
-          tag: 1.19.0
+          tag: 1.19.12
           pullPolicy: IfNotPresent
 
         command: ["python3", "-m", "copyparty", "-c", "/etc/copyparty/copyparty.conf"]
