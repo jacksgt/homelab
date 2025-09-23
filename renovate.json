@@ -25,6 +25,26 @@
           "ansible/requirements.yml"
       ],
       "groupName": "ansible-galaxy-collections"
+    },
+    // https://docs.renovatebot.com/modules/versioning/
+    // https://docs.renovatebot.com/modules/versioning/regex/
+    {
+      // custom versioning scheme for hotio container images, like "release-2.0.5.5160" or "release-5.0.4"
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/hotio/**"],
+      "versioning": "regex:^(?<compatibility>.*)-v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(\\.(?<build>\\d+))?$"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["docker.io/bitnami/**", "docker.io/bitnamilegacy/**"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:-(?<compatibility>.+)(?<build>\\d+)-r(?<revision>\\d+))?$"
+    },
+    {
+      // "loose" basically just sorts version by name to determine the latest one, good enough for date-based versions
+      // https://docs.renovatebot.com/modules/versioning/loose/
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/alexta69/metube", "ghcr.io/olivetin/olivetin"],
+      "versioning": "loose"
     }
   ],
   "helm-values": {
