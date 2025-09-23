@@ -246,7 +246,7 @@ releases:
   labels:
     type: app
   chart: stirling-tools/stirling-pdf-chart
-  version: 1.5.0
+  version: 1.10.0
   values:
     - stirling-pdf/values.yaml
 
