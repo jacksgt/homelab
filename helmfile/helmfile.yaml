@@ -129,7 +129,7 @@ releases:
   labels:
     type: platform
   chart: db-operator/db-operator
-  version: 1.30.0
+  version: 1.41.0
   values:
     - ./db-operator/values.yaml
 
