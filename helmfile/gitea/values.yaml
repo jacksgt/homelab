@@ -34,6 +34,7 @@ gitea:
       DISABLE_REGISTRATION: true
       # users should register themselves with the IDP, not in Gitea
       SHOW_REGISTRATION_BUTTON: false
+      ENABLE_NOTIFY_MAIL: true
     # https://docs.gitea.com/next/administration/logging-config
     log:
       LEVEL: "Info" # Trace, Debug, Info, Warn, Error, Critical, Fatal, None
