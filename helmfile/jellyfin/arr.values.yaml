@@ -333,7 +333,7 @@ controllers:
           #
           # https://github.com/hotio/sonarr/pkgs/container/sonarr
           repository: ghcr.io/hotio/sonarr
-          tag: release-4.0.13.2932
+          tag: release-4.0.15.2941
           pullPolicy: IfNotPresent
 
         command:
