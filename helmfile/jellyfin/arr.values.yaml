@@ -831,9 +831,7 @@ configMaps:
     data:
       copyparty.conf: |
         [global]
-          e2dsa               # enable file indexing and filesystem scanning
-          e2ts                # enable multimedia indexing
-          re-maxage: 3600     # re-index once an hour
+          # note: indexing is NOT enabled, it's too resource intensive on a large media collection
           hist: /tmp/hists/   # save index and thumbnails in this folder, instead of in the volume
           ansi                # enable colors in log messages
           p: 3923             # listen on port 3923
