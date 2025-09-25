@@ -456,7 +456,7 @@ controllers:
             Accepted=true
             EOF
             fi
-            exec /app/qbittorrent-nox
+            exec /app/qbittorrent-nox-lib1
 
         env:
           - name: XDG_CONFIG_HOME
