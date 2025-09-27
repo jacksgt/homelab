@@ -1,5 +1,8 @@
 FROM docker.io/library/alpine:3.22
 
+LABEL org.opencontainers.image.source "https://git.cubieserver.de/Cubieserver/homelab"
+LABEL org.opencontainers.image.title "Toolbox for Jack's Homelab"
+
 # Install tools and dependencies
 RUN apk add --no-cache \
     bash \
