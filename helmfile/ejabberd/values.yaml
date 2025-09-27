@@ -2,7 +2,7 @@ image:
   # https://github.com/processone/ejabberd/releases
   # https://github.com/processone/ejabberd/pkgs/container/ejabberd
   repository: ghcr.io/processone/ejabberd
-  tag: 23.01@sha256:163b9d9ccb2edd2c70863712b75ef360f0f5cb35f4c0f8027b74f6c58e1160a9
+  tag: "25.08"
 
 # no persistence for the moment (empytDir only)
 # the container gets restarted rarely enough that this is not a problem

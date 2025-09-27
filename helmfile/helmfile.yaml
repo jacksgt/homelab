@@ -31,6 +31,8 @@ repositories:
    url: https://jellyfin.github.io/jellyfin-helm
  - name: docker-postfix
    url: https://bokysan.github.io/docker-postfix/
+ - name: martialblog
+   url: https://martialblog.github.io/helm-charts
 
   # - name: myOCIRegistry
   #   url: myregistry.azurecr.io
@@ -303,8 +305,8 @@ releases:
 #   namespace: ejabberd
 #   labels:
 #     type: app
-#   chart: ./ejabberd/martialblog-helm-charts/ejabberd/
-#   # version: "0.2.0"
+#   chart: martialblog/ejabberd
+#   version: "0.3.0"
 #   secrets:
 #     - ejabberd/ejabberd-values.secret.yaml
 #   values:
