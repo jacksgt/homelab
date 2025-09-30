@@ -182,7 +182,6 @@ releases:
   values:
     - homepage/values.yaml
 
-# TODO: also manage backup cronjob with Helmfile
 - name: postgres
   namespace: postgres
   createNamespace: true

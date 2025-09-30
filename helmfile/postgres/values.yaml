@@ -14,7 +14,10 @@ image:
 diagnosticMode:
   enabled: false
 auth:
-  # postgresPassword set in secret.yaml
+  # this secret is deployed via extraDeploy from postgres-values.secret.yaml
+  existingSecret: "postgres-admin-secret"
+  secretKeys:
+    adminPasswordKey: "password"
 serviceAccount:
   create: true
 postgresqlDataDir: /var/lib/postgresql/data
@@ -74,22 +77,47 @@ primary:
     ingressNSMatchLabels:
       networkpolicy-postgres-access: "enabled"
 
-extraDeploy:
-- apiVersion: kinda.rocks/v1beta1
-  kind: DbInstance
-  metadata:
-    name: pg-instance-prod
-    # cluster-wide resource, no namespace
-  spec:
-    adminSecretRef:
-      # TODO: this secret should be managed by Helm as well
-      Name: postgres-admin-secret-for-db-instance
-      Namespace: postgres
-    engine: postgres
-    generic:
-      host: postgres.postgres.svc.cluster.local
-      port: 5432
-    monitoring:
-      enabled: false
-    sslConnection:
-      enabled: false
+backup:
+  enabled: true
+  cronjob:
+    schedule: "14 1 * * *"
+    concurrencyPolicy: Forbid
+    restartPolicy: Never
+    labels:
+      networkpolicy-postgres-access: "enabled"
+    storage:
+      storageClass: "local-path-btrfs"
+      size: 1
+      mountPath: "/backup"
+    # Note that various PG* environment variables are automatically set by the Helm chart
+    command:
+      - /bin/bash
+      - -c
+      - |
+        set -u
+        # looks like we need a little time here before we can connect to the DB ... no clue why
+        sleep 5
+        export PGPASSWORD="${PGPASSWORD:-$(< "$PGPASSWORD_FILE")}"
+        DATABASES=$(psql -At -c "SELECT datname FROM pg_database WHERE NOT datistemplate AND datallowconn ORDER BY datname;")
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Failed to get list of databases, aborting".
+          exit 1
+        fi
+        for DB in $DATABASES; do
+          echo "Backing up database ${DB}..."
+          BACKUP_FILE="${DB}_$(date '+%Y%m%d-%H%M%S').sql"
+          START_TS="$SECONDS"
+          pg_dump --clean --if-exists --format=plain "$DB" > "${PGDUMP_DIR}/${BACKUP_FILE}"
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Database backup failed, aborting."
+            exit 1
+          fi
+          echo "Successfully backed up ${DB} to ${BACKUP_FILE} in $(( $SECONDS - $START_TS ))s"
+          echo "---"
+        done
+        echo "Cleaning up database backups that are older than 14 days..."
+        find "${PGDUMP_DIR}" -type f -name '*.sql' -mtime "+14" -print -delete
+        echo "---"
+        echo "Done."
+
+# see also `extraDeploy` in postgres-values.secret.yaml

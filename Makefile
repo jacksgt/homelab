@@ -4,13 +4,13 @@ TOOLBOX_IMAGE := docker.io/jacksgt/homelab-toolbox:latest
 MARIADB_BACKUP_CRONJOB_NAME := mariadb-backup
 backup-mariadb:
 	kubectl -n mariadb create job $(MARIADB_BACKUP_CRONJOB_NAME)-$(TIMESTAMP) --from=cronjob/$(MARIADB_BACKUP_CRONJOB_NAME)
-	sleep 2
+	sleep 3
 	kubectl -n mariadb logs job/$(MARIADB_BACKUP_CRONJOB_NAME)-$(TIMESTAMP) --follow
 
-POSTGRES_BACKUP_CRONJOB_NAME := postgres-backup
+POSTGRES_BACKUP_CRONJOB_NAME := postgres-pgdumpall
 backup-postgres:
 	kubectl -n postgres create job $(POSTGRES_BACKUP_CRONJOB_NAME)-$(TIMESTAMP) --from=cronjob/$(POSTGRES_BACKUP_CRONJOB_NAME)
-	sleep 2
+	sleep 3
 	kubectl -n postgres logs job/$(POSTGRES_BACKUP_CRONJOB_NAME)-$(TIMESTAMP) --follow
 
 build-toolbox:
