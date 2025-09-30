@@ -1,5 +1,7 @@
 image:
-  tag: "1.25"
+  # https://github.com/orgs/nginxinc/packages/container/package/nginx-unprivileged
+  repository: ghcr.io/nginxinc/nginx-unprivileged
+  tag: "1.27.4"
 ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-production
