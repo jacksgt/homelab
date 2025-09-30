@@ -1,4 +1,4 @@
-TIMESTAMP := $(shell date '+%Y%m%d-%H%M%S)
+TIMESTAMP := $(shell date '+%Y%m%d-%H%M%S')
 TOOLBOX_IMAGE := docker.io/jacksgt/homelab-toolbox:latest
 
 MARIADB_BACKUP_CRONJOB_NAME := mariadb-backup

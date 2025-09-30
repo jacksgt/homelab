@@ -1,21 +1,31 @@
-# https://github.com/bitnami/charts/blob/postgresql/13.2.9/bitnami/postgresql/values.yaml
+# https://github.com/bitnami/charts/blob/postgresql/16.7.27/bitnami/postgresql/values.yaml
 fullnameOverride: "postgres"
+
+global:
+  security:
+    # allow custom images
+    allowInsecureImages: true
 image:
-  # https://hub.docker.com/r/bitnamilegacy/postgresql/tags
+  # https://hub.docker.com/_/postgres/
   registry: docker.io
-  repository: bitnamilegacy/postgresql
-  tag: 14-debian-11
-# sleep infinity + disable health probes
-# diagnosticMode:
-#   enabled: true
+  repository: library/postgres
+  tag: 17.6-trixie
+# diagnosticMode = sleep infinity + disable health probes
+diagnosticMode:
+  enabled: false
 auth:
   # postgresPassword set in secret.yaml
 serviceAccount:
   create: true
+postgresqlDataDir: /var/lib/postgresql/data
 primary:
   service:
     type: ClusterIP
+  pdb:
+    # no need for a PodDisruptionBudget
+    create: false
   persistence:
+    mountPath: /var/lib/postgresql
     storageClass: "local-path-xfs"
     size: 1
     annotations:
@@ -29,6 +39,40 @@ primary:
     limits:
       cpu: 1
       memory: 1Gi
+  extraVolumeMounts:
+    - name: var-run
+      mountPath: /var/run
+  extraVolumes:
+    - name: var-run
+      empytDir: {}
+
+  # official postgres image has user postgres:999:99
+  podSecurityContext:
+    enabled: true
+    fsGgroup: 999
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 999
+    runAsGroup: 999
+    runAsNonRoot: true
+    privileged: false
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+
+  networkPolicy:
+    enabled: true
+    # do not allow outgoing connections (except cluster services, DNS etc.)
+    allowExternalEgress: false
+    # deny all ingress except matching pods
+    # disable the value below for debugging
+    allowExternal: false
+    ingressNSPodMatchLabels:
+      networkpolicy-postgres-access: "enabled"
+    # Unfortunately it is not easy to manage Namespace labels with Helm, therefore these labels have to be added manually to the relevant namespace.
+    ingressNSMatchLabels:
+      networkpolicy-postgres-access: "enabled"
 
 extraDeploy:
 - apiVersion: kinda.rocks/v1beta1

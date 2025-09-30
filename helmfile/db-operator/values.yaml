@@ -1,3 +1,4 @@
+# https://github.com/db-operator/charts/blob/main/charts/db-operator/values.yaml
 crds:
   install: true
   keep: true
@@ -25,6 +26,7 @@ resources:
 # This label needs to be added to the namespace as well
 podLabels:
   networkpolicy-mariadb-access: "enabled"
+  networkpolicy-postgres-access: "enabled"
 serviceMonitor:
   enabled: false
 webhook:

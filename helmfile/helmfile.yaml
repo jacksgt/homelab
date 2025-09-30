@@ -189,7 +189,7 @@ releases:
   labels:
     type: platform
   chart: bitnamicharts-oci/postgresql
-  version: 13.2.9
+  version: 16.7.27
   secrets:
     - postgres/postgres-values.secret.yaml
   values:

@@ -30,6 +30,9 @@ server:
     initialDelaySeconds: 60
     periodSeconds: 30
 
+  podLabels:
+    networkpolicy-postgres-access: "enabled"
+
   ingress:
     enabled: true
     annotations:
@@ -74,16 +77,18 @@ postgresql:
   enabled: false
 
 worker:
+  podLabels:
+    networkpolicy-postgres-access: "enabled"
   envFrom:
     - secretRef:
         name: authentik-db-credentials
   resources:
     requests:
       memory: 250Mi
-      cpu: 10m
+      cpu: 50m
     limits:
-      memory: 500Mi
-      cpu: 100m
+      memory: 700Mi
+      cpu: 250m
   securityContext:
     runAsNonRoot: true
   podSecurityContext:
