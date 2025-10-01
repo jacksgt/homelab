@@ -202,9 +202,10 @@ releases:
   # https://github.com/goauthentik/authentik/releases
   # https://goauthentik.io/docs/releases
   # https://github.com/goauthentik/helm
-  # note Authentik releases and Helm chart releases are in-sync
+  # note 1: Authentik releases and Helm chart releases are in-sync
+  # note 2: Authentik does NOT support skipping releases
   chart: authentik/authentik
-  version: "2024.12.3"
+  version: "2025.8.4"
   secrets:
     - authentik/authentik-values.secret.yaml
   values:
