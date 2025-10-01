@@ -20,7 +20,8 @@ auth:
     adminPasswordKey: "password"
 serviceAccount:
   create: true
-postgresqlDataDir: /var/lib/postgresql/data
+# need to use a sub-directory of the mount path here because otherwise postgres' initdb goes crazy about the permissions
+postgresqlDataDir: /var/postgres/data
 primary:
   service:
     type: ClusterIP
@@ -28,13 +29,19 @@ primary:
     # no need for a PodDisruptionBudget
     create: false
   persistence:
-    mountPath: /var/lib/postgresql
+    # using a non-standard mount here to avoid shenanigans caused by the fact
+    # that the official postgres docker image sets VOLUME directives
+    mountPath: /var/postgres
     storageClass: "local-path-xfs"
     size: 1
     annotations:
       # backups are handled via pgdump to be fully consistent
       # (which is not guaranteed with filesystem-level backups)
       backup-enabled: "false"
+  extraEnvVars:
+    # this makes sure files such as .psql_history are preserved
+    - name: HOME
+      value: /var/postgres
   resources:
     requests:
       cpu: 250m
@@ -49,7 +56,7 @@ primary:
     - name: var-run
       empytDir: {}
 
-  # official postgres image has user postgres:999:99
+  # official postgres image has user postgres:999:999
   podSecurityContext:
     enabled: true
     fsGgroup: 999
