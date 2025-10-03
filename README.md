@@ -9,11 +9,47 @@ The installation, setup and configuration of all software involved is handled by
 * **Ansible**: used for provisioning physical machines until they can join the Kubernetes cluster
 * **Helm**: deploys all services on top of Kubernetes (specifically **Helmfile**)
 
-An overview of the currently running services can be found on the [Cubieserver homepage](https://www.cubieserver.de).
-
 In the past I also used various other setups for managing my systems:  Docker Swarm (circa 2017-2018), [Puppet (circa 2018-2021)](https://git.cubieserver.de/Cubieserver/puppet-control), [Flux](https://git.cubieserver.de/Cubieserver/homelab/src/branch/flux-old).
 
 As with any good homelab setup, the setup keeps evolving and there are always some loose ends that need tying up.
+
+## Apps & services
+
+An overview of the currently running services can be found on the [Cubieserver homepage](https://www.cubieserver.de).
+
+Service Dependency Graph:
+```mermaid
+
+graph TD
+    subgraph Applications
+    Nextcloud
+    Jellyfin
+    Gitea
+    u9k
+    ejabberd
+    end
+
+    subgraph Databases
+    MariaDB[(MariadDB)]
+    PostgreSQL[(PostgreSQL)]
+    end
+
+    Nextcloud -->|SQL| MariaDB
+    Nextcloud -->|OIDC| Authentik
+    Nextcloud -->|HTTP| Traefik
+    Authentik -->|SQL| PostgreSQL
+    Authentik -->|HTTP| Traefik
+    Jellyfin -->|LDAP| Authentik
+    Jellyfin -->|HTTP| Traefik
+    Gitea -->|OIDC| Authentik
+    Gitea -->|HTTP| Traefik
+    Gitea -->|SQL| MariaDB
+    u9k -->|SQL| PostgreSQL
+    u9k -->|HTTP| Traefik
+    u9k -->|HTTP| Minio
+    ejabberd -->|LDAP| Authentik
+    ejabberd -->|SQL| MariaDB
+```
 
 ## Selfhosted Applications
 
