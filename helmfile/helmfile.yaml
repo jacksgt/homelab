@@ -156,7 +156,7 @@ releases:
   # https://gitea.com/gitea/helm-chart#upgrading
   # https://gitea.com/gitea/helm-chart/releases
   chart: gitea/gitea
-  version: 10.5.0
+  version: 12.4.0
   secrets:
     - gitea/gitea-values.secret.yaml
   values:
