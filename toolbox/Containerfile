@@ -18,6 +18,8 @@ RUN apk add --no-cache \
     bzip2 \
     zstd \
     coreutils \
+    tcpdump \
+    strace \
     ca-certificates
 
 ENV YQ_VERSION=4.47.2
