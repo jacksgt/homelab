@@ -161,6 +161,18 @@ releases:
     - gitea/gitea-values.secret.yaml
   values:
     - gitea/values.yaml
+  # Point the service to Anubis instead of Gitea directly
+  # Gitea Helm chart currently does not support changing the targetPort, hence this hack
+  # https://gitea.com/gitea/helm-gitea/issues/900
+  jsonPatches:
+  - target:
+      version: v1
+      kind: Service
+      name: gitea-http
+    patch:
+      - op: replace
+        path: /spec/ports/0/targetPort
+        value: 3001
 
 - name: s3-website-gateway
   namespace: static-websites
