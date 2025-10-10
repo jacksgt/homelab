@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     nano \
     kubectl \
     helm \
+    kustomize \
     curl \
     sops \
     jq \
