@@ -101,6 +101,47 @@ extraContainerVolumeMounts:
     subPath: robots.txt
     readOnly: true
 
+# Add Anubis sidecar to prevents bots from crawling
+# https://gitea.com/gitea/helm-gitea/issues/900#issuecomment-1031292
+# https://anubis.techaro.lol/docs/admin/environments/kubernetes/
+extraContainers:
+  - name: anubis
+    image: ghcr.io/techarohq/anubis:latest
+    imagePullPolicy: Always
+    env:
+      # https://github.com/TecharoHQ/anubis/issues/110
+      - name: "DIFFICULTY"
+        value: "4"
+      - name: "BIND"
+        value: ":3001"
+      - name: "BIND_NETWORK"
+        value: "tcp"
+      - name: "COOKIE_DOMAIN"
+        value: "git.cubieserver.de"
+      - name: "COOKIE_EXPIRATION_TIME"
+        value: "24h"
+      - name: "TARGET"
+        value: "http://127.0.0.1:3000"
+      - name: "XFF_STRIP_PRIVATE"
+        value: "false"
+      - name: "USE_REMOTE_ADDRESS"
+        value: "false"
+      - name: "POLICY_FNAME"
+        value: "/etc/bot-policies.yaml"
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+    volumeMounts:
+      - name: custom-gitea-config
+        mountPath: /etc/bot-policies.yaml
+        subPath: bot-policies.yaml
+        readOnly: true
+
 persistence:
   enabled: true
   storageClass: "local-path-btrfs"
@@ -168,3 +209,36 @@ extraDeploy:
     robots.txt: |
       User-agent: *
       Disallow: /
+
+    # Policy for Anubis
+    # https://anubis.techaro.lol/docs/admin/policies
+    # https://github.com/TecharoHQ/anubis/blob/main/data/botPolicies.yaml
+    bot-policies.yaml: |
+      bots:
+        - name: docker-registry
+          path_regex: ^/v2/.*$
+          action: ALLOW
+        - name: api
+          path_regex: ^/api/.*$
+          action: ALLOW
+        # Allow common "keeping the internet working" routes (well-known, favicon, robots.txt)
+        - import: (data)/common/keep-internet-working.yaml
+        # Pathological bots to deny
+        - import: (data)/bots/_deny-pathological.yaml
+        - import: (data)/bots/aggressive-brazilian-scrapers.yaml
+        # Aggressively block AI/LLM related bots/agents by default
+        - import: (data)/meta/ai-block-aggressive.yaml
+        # Remove likelyhood of challenge when user has a Gitea cookie
+        # https://anubis.techaro.lol/docs/admin/policies#request-weight
+        - name: gitea-session-token
+          action: WEIGH
+          expression:
+            all:
+              - '"Cookie" in headers'
+              - headers["Cookie"].contains("i_love_gitea=")
+          # Remove 5 weight points
+          weight:
+            adjust: -5
+        - name: catch-all-challenge
+          path_regex: .*
+          action: CHALLENGE

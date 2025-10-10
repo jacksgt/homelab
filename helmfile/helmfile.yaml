@@ -161,6 +161,7 @@ releases:
     - gitea/gitea-values.secret.yaml
   values:
     - gitea/values.yaml
+  postRenderer: "./gitea/post-render.sh"
 
 - name: s3-website-gateway
   namespace: static-websites
