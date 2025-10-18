@@ -4,7 +4,7 @@ image:
   # https://github.com/home-assistant/core/releases
   # https://github.com/home-assistant/core/pkgs/container/home-assistant
   repository: "ghcr.io/home-assistant/home-assistant"
-  tag: "2025.9.4"
+  tag: "2025.10.3"
 env:
 - name: "TZ"
   value: "Europe/Zurich"
