@@ -17,6 +17,7 @@ build-toolbox:
 	podman image build \
 	--label "org.opencontainers.image.created=$(shell date --rfc-3339=seconds)" \
 	--label "org.opencontainers.image.revision=$(shell git rev-parse HEAD)" \
+        --rewrite-timestamp --timestamp=0 \
 	-t $(TOOLBOX_IMAGE) toolbox/
 
 publish-toolbox:

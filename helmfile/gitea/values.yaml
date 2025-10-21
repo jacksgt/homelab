@@ -221,6 +221,11 @@ extraDeploy:
         - name: api
           path_regex: ^/api/.*$
           action: ALLOW
+        - name: git
+          expression:
+            all:
+              - 'userAgent.startsWith("git/")'
+          action: ALLOW
         # Allow common "keeping the internet working" routes (well-known, favicon, robots.txt)
         - import: (data)/common/keep-internet-working.yaml
         # Pathological bots to deny
