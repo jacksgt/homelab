@@ -241,7 +241,7 @@ controllers:
         image:
           # https://github.com/Radarr/Radarr/releases
           repository: ghcr.io/hotio/radarr
-          tag: release-5.27.5.10198
+          tag: release-5.28.0.10274
           pullPolicy: IfNotPresent
 
         command:
