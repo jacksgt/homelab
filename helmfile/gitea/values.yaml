@@ -159,7 +159,8 @@ resources:
 
 service:
   ssh:
-    port: 2222 # see SSH_PORT above
+    port: 2222 # must match SSH_PORT above
+    type: LoadBalancerService
 
 ingress:
   enabled: true
