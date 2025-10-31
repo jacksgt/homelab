@@ -149,7 +149,7 @@ prometheus:
   # https://github.com/prometheus/prometheus/releases
   image:
     repository: quay.io/prometheus/prometheus
-    tag: "2.55.1"
+    tag: "3.7.3"
     pullPolicy: IfNotPresent
 
   ingress:
