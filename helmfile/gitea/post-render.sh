@@ -11,4 +11,4 @@ set -e
 cd gitea/
 cat <&0 > all.yaml
 kustomize build .
-rm all.yaml
+rm -f all.yaml
