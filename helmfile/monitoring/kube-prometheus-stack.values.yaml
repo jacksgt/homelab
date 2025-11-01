@@ -1,4 +1,4 @@
-# https://github.com/prometheus-community/helm-charts/blob/7d259fabb8ab61228afde493a4e13825f58ead1d/charts/kube-prometheus-stack/values.yaml
+# https://github.com/prometheus-community/helm-charts/blob/kube-prometheus-stack-79.1.0/charts/kube-prometheus-stack/values.yaml
 
 cleanPrometheusOperatorObjectNames: true
 
@@ -144,13 +144,6 @@ prometheusOperator:
 
 prometheus:
   enabled: true
-  fullnameOverride: "prometheus"
-
-  # https://github.com/prometheus/prometheus/releases
-  image:
-    repository: quay.io/prometheus/prometheus
-    tag: "3.7.3"
-    pullPolicy: IfNotPresent
 
   ingress:
     enabled: true
@@ -166,6 +159,13 @@ prometheus:
 
 
   prometheusSpec:
+    # https://github.com/prometheus/prometheus/releases
+    image:
+      registry: quay.io
+      repository: prometheus/prometheus
+      tag: "v3.7.3"
+      pullPolicy: IfNotPresent
+
     nodeSelector:
       cubieserver.de/local-storage: "true"
     retention: 90d
