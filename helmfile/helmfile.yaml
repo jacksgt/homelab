@@ -87,8 +87,10 @@ releases:
     type: platform
   version: 79.1.0
   chart: prometheus-community/kube-prometheus-stack
+  secrets:
+    - monitoring/kube-prometheus-stack.secret.yaml
   values:
-  - monitoring/kube-prometheus-stack.values.yaml
+    - monitoring/kube-prometheus-stack.values.yaml
 
 - name: traefik
   namespace: traefik

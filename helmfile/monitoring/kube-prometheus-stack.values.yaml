@@ -10,12 +10,71 @@ alertmanager:
   # TODO: set up notification integration
   enabled: false
 
+# https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
 grafana:
-  # using external grafana
-  enabled: false
-  ## Create configmaps even if grafana deployment has been disabled
-  forceDeployDatasources: true
-  forceDeployDashboards: true
+  enabled: true
+  # Note: adminUser and adminPassword are set in kube-prometheus-stack.secret.yaml
+  initChownData:
+    enabled: false
+  rbac:
+    namespaced: true
+  serviceMonitor:
+    enabled: false
+  deploymentStrategy:
+    type: Recreate
+  grafana.ini:
+    analytics:
+      enabled: false
+      check_for_updates: false
+    server:
+      root_url: https://monitoring.cubieserver.de/grafana
+      serve_from_sub_path: true
+      enable_gzip: true
+    database:
+      type: sqlite3
+      wal: true
+
+  # Note: dashboard configmaps and sidecar config containers are only enabled for initial import
+  defaultDashboardsEnabled: false
+  sidecar:
+    dashboards:
+      enabled: false
+      searchNamespace: monitoring
+    datasources:
+      enabled: false
+      searchNamespace: monitoring
+    alerts:
+      enabled: false
+      searchNamespace: monitoring
+
+  networkPolicy:
+    enabled: true
+    ingress: true
+    allowExternal: false
+    explicitNamespacesSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: traefik
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-production
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    hosts:
+      - monitoring.cubieserver.de
+    path: "/grafana"
+    tls:
+      - secretName: monitoring-ingress-cert
+        hosts:
+          - monitoring.cubieserver.de
+  persistence:
+    enabled: true
+    storageClassName: "local-path-btrfs"
+    accessModes:
+      - ReadWriteOnce
+    size: 2Gi
+    volumeName: null
+    finalizers:
+      - kubernetes.io/pvc-protection
 
 kubernetesServiceMonitors:
   enabled: true
@@ -146,17 +205,7 @@ prometheus:
   enabled: true
 
   ingress:
-    enabled: true
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-production
-      traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    hosts: ["prometheus.cubieserver.de"]
-    paths: ["/"]
-    pathType: ImplementationSpecific
-    tls:
-      - secretName: prometheus-ingress-cert
-        hosts: ["prometheus.cubieserver.de"]
-
+    enabled: false
 
   prometheusSpec:
     # https://github.com/prometheus/prometheus/releases
