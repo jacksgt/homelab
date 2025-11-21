@@ -431,7 +431,7 @@ controllers:
         image:
           # https://github.com/hotio/qbittorrent/pkgs/container/qbittorrent
           repository: ghcr.io/hotio/qbittorrent
-          tag: release-5.1.2
+          tag: release-5.1.4
           pullPolicy: IfNotPresent
 
         command:
