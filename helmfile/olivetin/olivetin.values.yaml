@@ -151,7 +151,7 @@ controllers:
           # https://github.com/olivetin/OliveTin/pkgs/container/olivetin
           repository: ghcr.io/olivetin/olivetin
           # repository: docker.io/traefik/whoami
-          tag: 2025.2.21
+          tag: 2025.11.25
           pullPolicy: IfNotPresent
 
         # args: ["--port=1337"]
