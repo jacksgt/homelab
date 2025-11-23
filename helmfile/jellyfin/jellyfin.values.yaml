@@ -66,8 +66,8 @@ persistence:
     annotations:
       # No need to back up this data
       backup-enabled: "false"
-    size: 500Gi
-    storageClass: "local-path-btrfs"
+    size: 1000Gi
+    storageClass: "external-btrfs"
 
 ingress:
   enabled: true
