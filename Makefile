@@ -32,3 +32,12 @@ kube-dump:
 	kubedump -dir /workspace/kubedump \
 	--ignore-groups 'authentication.k8s.io,authorization.k8s.io,coordination.k8s.io,discovery.k8s.io,events.k8s.io,metrics.k8s.io' \
 	--ignore-resources 'endpoints,events,replicationcontrollers,controllerrevisions,replicasets'
+
+# https://kite.zzde.me/config/
+k8s-dashboard:
+	podman run --rm -it \
+	-e ANONYMOUS_USER_ENABLED=true \
+	-p 127.0.0.1:8080:8080 \
+	-v "${HOME}/.kube:/var/kube:ro,Z" \
+	-e KUBECONFIG=/var/kube/config \
+	ghcr.io/zxh326/kite:v0.7.3
