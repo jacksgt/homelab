@@ -1,0 +1,122 @@
+# kubectl -n jack apply -f trilium.yaml
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: trilium
+  name: trilium-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trilium
+  labels:
+    app: trilium
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: trilium
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: trilium
+    spec:
+      containers:
+      - command:
+        - /usr/local/bin/node
+        - /usr/src/app/main.cjs
+        # - sleep
+        # - infinity
+        env:
+        - name: TRILIUM_DATA_DIR
+          value: /data
+        image: ghcr.io/triliumnext/trilium:v0.100.0
+        imagePullPolicy: IfNotPresent
+        name: trilium
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 250Mi
+          requests:
+            cpu: 50m
+            memory: 150Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1003610000
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /data
+          name: trilium-data
+      enableServiceLinks: false
+      securityContext:
+        fsGroup: 1003610000
+#        fsGroupChangePolicy: Always
+        fsGroupChangePolicy: OnRootMismatch
+        seLinuxOptions:
+          level: s0:c60,c35
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: trilium-data
+        persistentVolumeClaim:
+          claimName: trilium-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: trilium
+  name: trilium
+spec:
+  ports:
+  - name: 8080-tcp
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: trilium
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trilium
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  labels:
+    app: trilium
+spec:
+  rules:
+  - host: jacks-trilium-notes.cubieserver.de
+    http:
+      paths:
+      - backend:
+          service:
+            name: trilium
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - jacks-trilium-notes.cubieserver.de
+    secretName: trilium-ingress-secret
