@@ -2,7 +2,8 @@
   "extends": [
     "config:recommended"
   ],
-  "commitMessage": "Update {{depName}} to {{newVersion}}",
+  // https://docs.renovatebot.com/configuration-templates/#commit-message
+  "commitMessage": "{{{commitMessageAction}}} {{{commitMessageTopic}}} {{{commitMessageExtra}}} {{{commitMessageSuffix}}}",
   "packageRules": [
     {
       "matchUpdateTypes": [
