@@ -37,6 +37,7 @@ defaultPodOptions:
     runAsUser: 1000
     runAsGroup: 1000
     runAsNonRoot: true
+    fsGroup: 1000
 
 controllers:
 
@@ -561,8 +562,13 @@ controllers:
                 path: /youtube
 
         # -- Set the resource requests / limits for the container.
-        # TODO
-        resources: {}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 500m
+            memory: 300Mi
 
         # -- Configure the Security Context for the container
         securityContext:

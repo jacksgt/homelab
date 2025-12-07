@@ -35,6 +35,8 @@ podSecurityContext:
   runAsNonRoot: true
   runAsUser: 65534
   runAsGroup: 65534
+  fsGroup: 65534
+  fsGroupChangePolicy: OnRootMismatch
 
 securityContext:
   privileged: false
@@ -59,8 +61,8 @@ readinessProbe:
 persistence:
   config:
     enabled: true
-    size: 1Gi
-    storageClass: "local-path-btrfs"
+    size: 3Gi
+    storageClass: "internal-btrfs"
   media:
     enabled: true
     annotations:
