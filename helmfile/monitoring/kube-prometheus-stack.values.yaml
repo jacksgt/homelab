@@ -7,7 +7,6 @@ defaultRules:
   disabled: {}
 
 alertmanager:
-  # TODO: set up notification integration
   enabled: false
 
 # https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
@@ -22,6 +21,13 @@ grafana:
     enabled: false
   deploymentStrategy:
     type: Recreate
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
   grafana.ini:
     analytics:
       enabled: false
@@ -68,11 +74,10 @@ grafana:
           - monitoring.cubieserver.de
   persistence:
     enabled: true
-    storageClassName: "local-path-btrfs"
+    storageClassName: "internal-btrfs"
     accessModes:
       - ReadWriteOnce
-    size: 2Gi
-    volumeName: null
+    size: 1Gi
     finalizers:
       - kubernetes.io/pvc-protection
 
@@ -130,7 +135,6 @@ kube-state-metrics:
   metricDenylist:
   - '(.+)_created$'
   - '(.+)_annotations$'
-  - '^kube_namespace_status_phase$'
   - '^kube_pod_status_qos_class$'
   - '^kube_pod_tolerations$'
 
@@ -142,14 +146,14 @@ kube-state-metrics:
   - daemonsets
   - deployments
   # - endpoints
-  - horizontalpodautoscalers
+  # - horizontalpodautoscalers
   - ingresses
   - jobs
   # - leases
   # - limitranges
   # - mutatingwebhookconfigurations
   - namespaces
-  # - networkpolicies
+  - networkpolicies
   - nodes
   - persistentvolumeclaims
   - persistentvolumes
@@ -189,7 +193,7 @@ prometheus-node-exporter:
       metricRelabelings:
       - sourceLabels: [__name__]
         separator: ;
-        regex: ^node_(ipvs|btrfs|netstat|network|nf|schedstat|sockstat|timex|udp|xfs|softnet)_.+
+        regex: ^node_(ipvs|netstat|nf|schedstat|sockstat|timex|udp|softnet)_.+
         replacement: $1
         action: drop
       - sourceLabels: [__name__]
