@@ -2,6 +2,7 @@
   "extends": [
     "config:recommended"
   ],
+  "commitMessage": "Update {{depName}} to {{newVersion}}",
   "packageRules": [
     {
       "matchUpdateTypes": [
