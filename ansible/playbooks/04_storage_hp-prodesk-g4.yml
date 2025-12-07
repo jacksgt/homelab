@@ -41,6 +41,19 @@
       tags:
         - data-btrfs
 
+    - name: Mount external BTRFS data disk
+      ansible.posix.mount:
+        state: present
+        # /dev/sdb1
+        src: UUID=f40651de-463c-42ec-97b7-6df444b940f1
+        path: /data/external
+        fstype: btrfs
+        opts: defaults,noatime
+        dump: '0'
+        passno: '0'
+      tags:
+        - data-btrfs
+
     - name: Delete old script
       ansible.builtin.file:
         path: /usr/local/sbin/btrfs-scrub-and-notify.sh
@@ -91,7 +104,7 @@
           {% if ntfy_topic is defined and ntfy_topic != '' %}
           Environment="NFTY_TOPIC={{ NTFY_TOPIC }}"
           {% endif %}
-          ExecStart=/usr/local/sbin/btrfs-scrub.sh /data/btrfs
+          ExecStart=/usr/local/sbin/btrfs-scrub.sh /data/btrfs /data/external-btrfs
 
           [Install]
           WantedBy=multi-user.target
@@ -110,7 +123,7 @@
 
           [Timer]
           # Run every morning and shortly after booting
-          OnCalendar=*-*-* 05:30:00
+          OnCalendar=*-*-* 04:15:00
           OnBootSec=15min
           RandomizedDelaySec=10min
 
