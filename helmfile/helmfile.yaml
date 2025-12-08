@@ -98,7 +98,7 @@ releases:
   labels:
     type: platform
   # https://github.com/traefik/traefik-helm-chart/tags
-  version: 37.0.0
+  version: 37.4.0
   chart: traefik/traefik
   values:
   - traefik/traefik.values.yaml
