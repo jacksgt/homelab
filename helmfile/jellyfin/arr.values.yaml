@@ -149,7 +149,7 @@ controllers:
         image:
           # https://github.com/Prowlarr/Prowlarr/releases
           repository: ghcr.io/hotio/prowlarr
-          tag: release-1.37.0.5076
+          tag: release-2.3.0.5236
           pullPolicy: IfNotPresent
 
         command:
