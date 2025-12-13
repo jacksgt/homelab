@@ -4,7 +4,7 @@ image:
   # https://github.com/nextcloud/server/tags
   # https://hub.docker.com/_/nextcloud/tags
   repository: docker.io/library/nextcloud
-  tag: "31.0.9-apache"
+  tag: "32.0.3-apache"
 
 ingress:
   enabled: true
