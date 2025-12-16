@@ -5,7 +5,7 @@ image:
   # https://github.com/jellyfin/jellyfin/releases
   # https://hub.docker.com/r/jellyfin/jellyfin/tags
   repository: docker.io/jellyfin/jellyfin
-  tag: "10.11.2"
+  tag: "10.11.5"
 
 resources:
   requests:
