@@ -281,7 +281,7 @@ releases:
   labels:
     type: app
   chart: jellyfin/jellyfin
-  version: 2.3.0
+  version: 2.7.0
   values:
     - jellyfin/jellyfin.values.yaml
 
