@@ -222,7 +222,7 @@ prometheus:
     image:
       registry: quay.io
       repository: prometheus/prometheus
-      tag: "v3.7.3"
+      tag: "v3.8.1"
       pullPolicy: IfNotPresent
 
     nodeSelector:
