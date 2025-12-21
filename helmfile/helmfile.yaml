@@ -262,7 +262,7 @@ releases:
   labels:
     type: app
   chart: pajikos/home-assistant
-  version: 0.3.26
+  version: 0.3.36
   values:
     - home-assistant/values.yaml
 
