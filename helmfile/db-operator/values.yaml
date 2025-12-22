@@ -6,7 +6,7 @@ crds:
 # https://github.com/db-operator/db-operator/pkgs/container/db-operator
 image:
   repository: ghcr.io/db-operator/db-operator
-  tag: 2.15.0
+  tag: 2.18.0
   pullPolicy: IfNotPresent
   logLevel: info
 # "" means watch resources in all namespaces
