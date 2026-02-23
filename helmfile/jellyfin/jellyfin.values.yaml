@@ -14,20 +14,16 @@ resources:
   limits:
     cpu: 2
     memory: 1.5Gi
+    gpu.intel.com/i915: "1"
 
 deploymentStrategy:
   type: Recreate
 
 volumes:
-  - name: hwa
-    hostPath:
-      path: /dev/dri
   - name: tmp
     emptyDir: {}
 
 volumeMounts:
-  - name: hwa
-    mountPath: /dev/dri
   - name: tmp
     mountPath: /tmp
 
@@ -37,13 +33,13 @@ podSecurityContext:
   runAsGroup: 65534
   fsGroup: 65534
   fsGroupChangePolicy: OnRootMismatch
+  supplementalGroups:
+    - 105 # render group for /dev/dri/renderD128 access
 
 securityContext:
   privileged: false
   readOnlyRootFilesystem: true
   capabilities:
-    add:
-      - "SYS_ADMIN"
     drop:
       - "ALL"
 

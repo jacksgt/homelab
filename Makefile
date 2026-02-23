@@ -23,6 +23,12 @@ build-toolbox:
 publish-toolbox:
 	podman image push $(TOOLBOX_IMAGE)
 
+run-toolbox-debug-pod:
+	kubectl run -n kube-system toolbox-debug --image=$(TOOLBOX_IMAGE) --command -- sleep infinity
+
+delete-toolbox-debug-pod:
+	kubectl delete -n kube-system toolbox-debug --force --grace-period=0
+
 kube-dump:
 	mkdir -p kubedump/$(TIMESTAMP)
 	podman run --rm \
@@ -35,9 +41,15 @@ kube-dump:
 
 # https://kite.zzde.me/config/
 k8s-dashboard:
-	podman run --rm -it \
+	podman run --rm -it -d \
+    --name k8s-dashboard \
 	-e ANONYMOUS_USER_ENABLED=true \
 	-p 127.0.0.1:8080:8080 \
 	-v "${HOME}/.kube:/var/kube:ro,Z" \
 	-e KUBECONFIG=/var/kube/config \
 	ghcr.io/zxh326/kite:v0.7.3
+
+	echo "http://localhost:8080"
+
+k8s-dashboard-stop:
+	podman rm -f k8s-dashboard
