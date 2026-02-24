@@ -42,7 +42,9 @@ defaultPodOptions:
 controllers:
 
   ############################################################################################
-  copyparty:
+  # https://explorer.nxz.ai/
+  # https://github.com/vikramsoni2/nextExplorer
+  nextexplorer:
     # -- enable the controller.
     enabled: true
 
@@ -53,7 +55,7 @@ controllers:
     annotations: {}
     # -- Set labels on the deployment/statefulset/daemonset/cronjob/job
     labels:
-      app.kubernetes.io/component: copyparty
+      app.kubernetes.io/component: nextexplorer
 
     # -- Number of desired pods. When using a HorizontalPodAutoscaler, set this to `null`.
     replicas: 1
@@ -66,23 +68,29 @@ controllers:
     revisionHistoryLimit: 3
 
     containers:
-      copyparty:
+      nextexplorer:
         image:
-          # https://github.com/9001/copyparty/pkgs/container/copyparty-ac
-          # https://github.com/9001/copyparty/blob/hovudstraum/scripts/docker/README.md
-          repository: ghcr.io/9001/copyparty-ac
-          tag: 1.19.12
+          # https://hub.docker.com/r/nxzai/explorer
+          repository: docker.io/nxzai/explorer
+          tag: v2.2.2
           pullPolicy: IfNotPresent
 
-        command: ["python3", "-m", "copyparty", "-c", "/etc/copyparty/copyparty.conf"]
-
         env:
-            # enable mimalloc by replacing "NOPE" with "2" for a nice speed-boost (will use twice as much ram)
-          - name: LD_PRELOAD
-            value: /usr/lib/libmimalloc-secure.so.NOPE
-            # ensures log-messages are not delayed (but can reduce speed a tiny bit)
-          - name: PYTHONUNBUFFERED
-            value: 1
+          - name: NODE_ENV
+            value: production
+          # WARNING: nextExplorer does not support subpath routing. Serving under /files will
+          # result in broken JS/CSS asset loading. Migrate to a dedicated subdomain to fix this.
+          # See: https://explorer.nxz.ai/installation/reverse-proxy.html
+          - name: PUBLIC_URL
+            value: "https://media.cubieserver.de/files"
+          - name: AUTH_MODE
+            value: disabled
+          - name: PUID
+            value: 1000
+          - name: PGID
+            value: 1000
+          - name: TRUST_PROXY
+            value: "loopback,uniquelocal"
 
         probes:
           liveness:
@@ -103,8 +111,8 @@ controllers:
               timeoutSeconds: 1
               failureThreshold: 3
               httpGet:
-                port: 3923
-                path: /files
+                port: 3000
+                path: /
 
         # -- Set the resource requests / limits for the container.
         resources:
@@ -597,16 +605,16 @@ serviceAccount:
 # Additional services can be added by adding a dictionary key similar to the 'main' service.
 # @default -- See below
 service:
-  copyparty:
+  nextexplorer:
     enabled: true
-    controller: copyparty
+    controller: nextexplorer
     type: ClusterIP
     labels:
-      app.kubernetes.io/component: copyparty
+      app.kubernetes.io/component: nextexplorer
     ports:
       http:
         enabled: true
-        port: 3923
+        port: 3000
         protocol: HTTP
 
 
@@ -688,11 +696,13 @@ ingress:
     hosts:
       - host: "{{ .Values.hostname }}"
         paths:
+          # WARNING: nextExplorer does not support subpath routing. Asset loading will be broken
+          # until this is resolved upstream or the app is migrated to a dedicated subdomain.
           - path: /files
             pathType: Prefix
             service:
               # -- Reference a service identifier from this values.yaml
-              identifier: copyparty
+              identifier: nextexplorer
               # -- Overrides the service port number reference for this path
               port: http
           - path: /qbittorrent
@@ -831,35 +841,6 @@ route:
   #       ## Request timeout that are applied to the rules.
   #       timeouts: {}
 
-configMaps:
-  copyparty-config:
-    enabled: true
-    data:
-      copyparty.conf: |
-        [global]
-          # note: indexing is NOT enabled, it's too resource intensive on a large media collection
-          hist: /tmp/hists/   # save index and thumbnails in this folder, instead of in the volume
-          ansi                # enable colors in log messages
-          p: 3923             # listen on port 3923
-          ver                 # show copyparty version in the controlpanel
-          # grid              # show thumbnails/grid-view by default
-          theme: 1            # classic-light
-          # name: datasaver   # change the server-name that's displayed in the browser
-          # stats, nos-dup    # enable the prometheus endpoint, but disable the dupes counter (too slow)
-
-          # enable IdP support by expecting username/groupname in
-          # http-headers provided by the reverse-proxy; header "X-IdP-User"
-          # will contain the username, "X-IdP-Group" the groupname
-          # idp-h-usr: x-idp-user
-          # idp-h-grp: x-idp-group
-
-          rp-loc=/files       # reverse proxy exposes behind a subpath
-
-        [/]            # create a volume at the URL "/files", which will
-          /data           # share /data inside the container
-          accs:
-            rwmda: *      # everyone gets read-write-move-delete-admin
-
 # -- Configure persistence for the chart here.
 # Additional items can be added by adding a dictionary key similar to the 'config' key.
 # [[ref]](https://bjw-s-labs.github.io/helm-charts/docs/common-library/common-library-storage)
@@ -873,23 +854,26 @@ persistence:
       - path: /tmp
         readOnly: false
 
-  copyparty-config:
+  nextexplorer-config:
     enabled: true
-    type: configMap
-    identifier: copyparty-config
+    type: emptyDir
+    # ephemeral volume for config is safe because AUTH_MODE=disabled means no user DB to preserve
     advancedMounts:
-      copyparty: # the controller
-        copyparty: # the container
-          - path: /etc/copyparty
+      nextexplorer: # the controller
+        nextexplorer: # the container
+          - path: /config
 
   data:
     enabled: true
     type: persistentVolumeClaim
     existingClaim: jellyfin-media
     advancedMounts:
-      copyparty: # the controller
-        copyparty: # the container
-          - path: /data
+      nextexplorer: # the controller
+        nextexplorer: # the container
+          - path: /mnt/Media  # browsable volume; appears as "Media" in the nextExplorer sidebar
+            readOnly: false
+          - path: /cache      # nextExplorer thumbnail/search-index cache; persisted across pod restarts
+            subPath: nextexplorer-cache
             readOnly: false
       qbittorrent:
         qbittorrent:
