@@ -47,12 +47,11 @@ config:
   kubernetes:
     mode: cluster # use serviceaccount from container
 
-  # https://gethomepage.dev/en/configs/settings
+  # https://gethomepage.dev/configs/settings/
   settings:
     title: "Cubieserver.de - Jack's Homelab"
 
-    # https://unsplash.com/photos/XKEObIMh0V0
-    background: "https://images.unsplash.com/photo-1506781994843-d2c500b1dde1?auto=format&fit=crop&w=2560&q=80"
+    background: "https://potd.cubieserver.de/picture-of-the-day.jpg"
     backgroundOpacity: 0.4
     color: zinc
 
@@ -121,12 +120,12 @@ config:
             description: Short URL and file sharing service
             namespace: u9k
             app: u9k
-        - Redlib:
-            href: https://reddit.cubieserver.de
-            icon: https://raw.githubusercontent.com/redlib-org/redlib/refs/heads/main/static/logo.png
-            description: Alternative frontend for Reddit
-            namespace: reddit
-            app: redlib
+        # - Redlib:
+        #     href: https://reddit.cubieserver.de
+        #     icon: https://raw.githubusercontent.com/redlib-org/redlib/refs/heads/main/static/logo.png
+        #     description: Alternative frontend for Reddit
+        #     namespace: reddit
+        #     app: redlib
         - Rustpad:
             href: https://notepad.cubieserver.de
             icon: mdi-pencil-#ffffff
@@ -151,7 +150,12 @@ config:
             app: webtools
             podSelector: >-
               app.kubernetes.io/component in (cyberchef)
-
+        - Picture of the Day:
+            href: https://potd.cubieserver.de
+            icon: mdi-flower-tulip-#ffffff
+            description: Upload your favorite pictures to use them as website backgrounds
+            namespace: potd
+            app: potd
 
     - "Backend services":
         - ejabberd:

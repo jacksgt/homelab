@@ -12,6 +12,8 @@ resources:
     cpu: 500m
     memory: 250Mi
 
+metricsRelistInterval: 1m
+
 rules:
   custom: []
     # - seriesQuery: '{__name__=~"^some_metric_count$"}'
@@ -37,7 +39,7 @@ rules:
     cpu:
       containerQuery: |
         sum by (<<.GroupBy>>) (
-          rate(container_cpu_usage_seconds_total{container!="",<<.LabelMatchers>>}[3m])
+          rate(container_cpu_usage_seconds_total{container!="",<<.LabelMatchers>>}[2m])
         )
       nodeQuery: |
         sum by (<<.GroupBy>>) (
@@ -55,7 +57,7 @@ rules:
     memory:
       containerQuery: |
         sum by (<<.GroupBy>>) (
-          avg_over_time(container_memory_working_set_bytes{container!="",<<.LabelMatchers>>}[3m])
+          avg_over_time(container_memory_working_set_bytes{container!="",<<.LabelMatchers>>}[2m])
         )
       nodeQuery: |
         sum by (<<.GroupBy>>) (
