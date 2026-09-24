@@ -4,7 +4,7 @@ image:
   # https://github.com/home-assistant/core/releases
   # https://github.com/home-assistant/core/pkgs/container/home-assistant
   repository: "ghcr.io/home-assistant/home-assistant"
-  tag: "2025.12.5"
+  tag: "2026.9.3"
 env:
 - name: "TZ"
   value: "Europe/Zurich"
@@ -23,12 +23,34 @@ persistence:
   size: 1
   storageClass: "local-path-btrfs"
 additionalVolumes:
+- name: custom-components
+  emptyDir: {}
 - name: zigbee-hub
   hostPath:
     type: CharDevice
     path: "/dev/serial/by-id/usb-ITEAD_SONOFF_Zigbee_3.0_USB_Dongle_Plus_V2_20231008100925-if00"
 additionalMounts:
+- name: custom-components
+  mountPath: /config/custom_components/
 - name: zigbee-hub
   mountPath: "/dev/ttyACM0"
 securityContext:
   privileged: true # required to mount a device
+# install custom components (HACS)
+initContainers:
+  - name: init-custom-components
+    image: docker.io/alpine/curl:latest
+    command: [ "/bin/sh", "-c" ]
+    args:
+    - |
+      set -e
+      cd /tmp
+      curl -sLO --fail-with-body https://github.com/nielsfaber/alarmo/releases/download/v1.10.18/alarmo.zip
+      mkdir /config/custom_components/alarmo
+      unzip alarmo.zip -d /config/custom_components/alarmo
+      curl -sLO --fail-with-body https://github.com/christiaangoossens/hass-oidc-auth/releases/download/v1.2.1/hass-oidc-auth.zip
+      mkdir /config/custom_components/hass-oidc-auth
+      unzip hass-oidc-auth.zip -d /config/custom_components/hass-oidc-auth
+    volumeMounts:
+    - name: custom-components
+      mountPath: /config/custom_components
