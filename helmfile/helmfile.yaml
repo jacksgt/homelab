@@ -265,6 +265,9 @@ releases:
   version: 0.3.26
   values:
     - home-assistant/values.yaml
+  dependencies:
+  - chart: incubator/raw
+    version: 0.2.5
 
 - name: redlib
   namespace: reddit

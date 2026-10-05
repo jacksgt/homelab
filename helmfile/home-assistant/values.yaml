@@ -10,47 +10,84 @@ env:
   value: "Europe/Zurich"
 nodeSelector:
   device: zigbee-hub
-# Required for use auto-discovery feature of Home Assistant
+# Required to use auto-discovery feature of Home Assistant
 hostNetwork: true
 hostPort:
-  enabled: true # can be enabled once ingress is enabled
+  enabled: true
   port: 8123
 ingress:
   # Enable ingress for home assistant
-  enabled: false # TODO
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: home.cubieserver.de
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+   - secretName: homeassistant-ingress-cert
+     hosts:
+       - home.cubieserver.de
 persistence:
   enabled: true
   size: 1
   storageClass: "local-path-btrfs"
 additionalVolumes:
-- name: custom-components
-  emptyDir: {}
+- name: homelab-toolbox
+  image:
+    reference: docker.io/jacksgt/homelab-toolbox:latest
+    pullPolicy: Always
 - name: zigbee-hub
   hostPath:
     type: CharDevice
     path: "/dev/serial/by-id/usb-ITEAD_SONOFF_Zigbee_3.0_USB_Dongle_Plus_V2_20231008100925-if00"
 additionalMounts:
-- name: custom-components
-  mountPath: /config/custom_components/
+- name: home-assistant
+  mountPath: /media/local-pvc
+  subPath: media
+# - name: custom-components
+#   mountPath: /config/custom_components
 - name: zigbee-hub
   mountPath: "/dev/ttyACM0"
+- name: homelab-toolbox
+  mountPath: /opt/
 securityContext:
   privileged: true # required to mount a device
-# install custom components (HACS)
-initContainers:
-  - name: init-custom-components
-    image: docker.io/alpine/curl:latest
-    command: [ "/bin/sh", "-c" ]
-    args:
-    - |
-      set -e
-      cd /tmp
-      curl -sLO --fail-with-body https://github.com/nielsfaber/alarmo/releases/download/v1.10.18/alarmo.zip
-      mkdir /config/custom_components/alarmo
-      unzip alarmo.zip -d /config/custom_components/alarmo
-      curl -sLO --fail-with-body https://github.com/christiaangoossens/hass-oidc-auth/releases/download/v1.2.1/hass-oidc-auth.zip
-      mkdir /config/custom_components/hass-oidc-auth
-      unzip hass-oidc-auth.zip -d /config/custom_components/hass-oidc-auth
-    volumeMounts:
-    - name: custom-components
-      mountPath: /config/custom_components
+
+# additional RBAC to allow home-assistant to run specific kubectl commands
+raw:
+  resources:
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: home-assistant-kubectl
+    rules:
+    - apiGroups:
+      - apps
+      resources:
+      - deployments
+      verbs:
+      - get
+      - list
+    - apiGroups:
+      - apps
+      resources:
+      - deployments/scale
+      verbs:
+      - update
+      - patch
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: home-assistant-kubectl
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: home-assistant-kubectl
+    subjects:
+    # ServiceAccount created by main Helm chart
+    - kind: ServiceAccount
+      name: home-assistant
+      namespace: home-assistant
