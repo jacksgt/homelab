@@ -4,7 +4,7 @@
   gather_facts: true
   vars:
     # https://github.com/k3s-io/k3s/releases
-    k3s_version: v1.31.1+k3s1
+    k3s_version: v1.37.1+k3s1
     tailscale_interface: tailscale0
     tailscale_ip: "{{ hostvars[inventory_hostname]['ansible_facts'][tailscale_interface]['ipv4']['address'] }}"
     # move to hostvar when necessary
